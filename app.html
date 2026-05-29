@@ -413,6 +413,12 @@ async function startProcess(){
 
   // FASE 2: AI Matching
   addLog("Fase 2: AI matching "+kList.length+" karyawan...","in");
+  addLog("--- DEBUG: KK terekstrak: "+kkDocs.length+" ---","in");
+  kkDocs.forEach(function(k,i){addLog("  KK["+i+"]: "+k.kepala_keluarga+" ("+k.anak.length+" anak: "+k.anak.map(function(a){return a.nama;}).join(", ")+")","in");});
+  addLog("--- DEBUG: Raport terekstrak: "+rapDocs.length+" ---","in");
+  rapDocs.forEach(function(r,i){addLog("  Rap["+i+"]: "+r.nama_siswa+" | "+r.jenjang+" | "+r.tahun_ajaran,"in");});
+  addLog("--- DEBUG: Karyawan dicari: "+kList.length+" ---","in");
+  kList.forEach(function(k,i){addLog("  Kar["+i+"]: "+k.nama+" | "+k.jenjang,"in");});
   results=[];
 
   for(var j=0;j<kList.length;j++){
