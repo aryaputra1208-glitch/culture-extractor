@@ -294,11 +294,14 @@ function getMT(file){const e=file.name.split(".").pop().toLowerCase();if(e==="pd
 
 function normalizeJenjang(j){
   if(!j)return"";
-  const t=j.toUpperCase().replace(/[^A-Z0-9 ]/g,"");
-  if(/SD|DASAR|IBTIDAIYAH/.test(t))return"SD";
-  if(/SMP|PERTAMA|MTS/.test(t))return"SMP";
-  if(/SMA|SMK|ALIYAH|ATAS/.test(t))return"SMA";
+  const t=j.toUpperCase().replace(/[^A-Z0-9\/]/g," ").trim();
+  if(/PAUD|TK|RA|TAMAN KANAK|KELOMPOK BERMAIN|PLAYGROUP/.test(t))return"PAUD/TK";
+  if(/PESANTREN|MADRASAH DINIYAH|DINIYAH/.test(t))return"Pesantren/Madrasah";
   if(/PERGURUAN|UNIVERSITAS|POLITEKNIK|INSTITUT|S1|S2|D3|D4/.test(t))return"Perguruan Tinggi";
+  if(/SMK/.test(t))return"SMK";
+  if(/SMA|ALIYAH|ATAS/.test(t))return"SMA";
+  if(/SMP|PERTAMA|MTS/.test(t))return"SMP";
+  if(/SD|DASAR|IBTIDAIYAH/.test(t))return"SD";
   return j.trim();
 }
 
@@ -313,20 +316,45 @@ async function callClaude(messages, maxTokens=1500){
 }
 
 // ── Ekstrak dokumen ────────────────────────────────────────────
-const PROMPT_EXTRACT=`Kamu adalah sistem ekstraksi dokumen untuk validasi beasiswa karyawan. Tentukan tipe dokumen dan ekstrak data.
+const PROMPT_EXTRACT=`Kamu adalah sistem ekstraksi dokumen untuk validasi beasiswa karyawan. Tugasmu membaca dan mengekstrak data dari foto atau scan dokumen — meski foto miring, buram, kontras rendah, atau sebagian terpotong. Lakukan yang terbaik untuk membaca teks yang ada.
 
-Kembalikan HANYA JSON murni (tanpa markdown):
+LANGKAH 1 — Tentukan tipe dokumen:
+- KARTU KELUARGA: ada header "KARTU KELUARGA", nomor KK, kolom NIK, nama kepala keluarga, daftar anggota keluarga dengan hubungan (Kepala Keluarga / Istri / Anak)
+- RAPORT: dokumen penilaian anak dari sekolah. Bisa berupa:
+  * Raport SD/SMP/SMA/SMK: ada nama peserta didik/siswa, nama sekolah, kelas, semester, tahun pelajaran, daftar mata pelajaran dan nilai
+  * Raport PAUD/TK/RA: ada nama anak, nama lembaga PAUD/TK/RA/Kelompok Bermain, penilaian perkembangan (BB/MB/BSH/BSB atau centang), tanggal/periode
+  * Raport Pesantren/Madrasah: ada nama santri/siswa, nama pondok/madrasah, penilaian kitab atau mata pelajaran agama
+- Jika tidak jelas, coba baca semua orientasi (miring, terbalik) sebelum memutuskan UNKNOWN
 
-Jika KARTU KELUARGA — hanya anggota hubungan "Anak":
-{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"","jenis_kelamin":"","tanggal_lahir":"","pendidikan":""}]}
+LANGKAH 2 — Ekstrak data sesuai tipe:
 
-Jika RAPORT ANAK:
+Jika KARTU KELUARGA — ekstrak HANYA anggota dengan Status Hubungan = "Anak":
+{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"","jenis_kelamin":"L/P","tanggal_lahir":"","pendidikan":""}]}
+Catatan KK:
+- Isi "pendidikan" sesuai yang tertulis di kolom Pendidikan KK (misal: "Belum Tamat SD", "SLTA/Sederajat", "Tidak/Blm Sekolah", dll)
+- Hanya masukkan anggota yang hubungannya = "Anak", skip Kepala Keluarga dan Istri/Suami
+- Jika foto miring/buram, tetap coba baca dan isi field semampu mungkin
+
+Jika RAPORT (semua jenis: SD/SMP/SMA/SMK/PAUD/TK/RA/Pesantren/Madrasah):
 {"tipe":"Raport","nama_siswa":"","nama_sekolah":"","jenjang":"","kelas":"","semester":"","tahun_ajaran":""}
-- jenjang: SD/SMP/SMA/SMK/Perguruan Tinggi
-- semester: "1" atau "2", tahun_ajaran: format "2024/2025"
+Catatan Raport:
+- jenjang: pilih salah satu: "PAUD/TK", "SD", "SMP", "SMA", "SMK", "Perguruan Tinggi", "Pesantren/Madrasah"
+  * PAUD/TK/RA/Kelompok Bermain → "PAUD/TK"
+  * SD/MI/Madrasah Ibtidaiyah → "SD"
+  * SMP/MTs → "SMP"
+  * SMA/MA → "SMA"
+  * SMK → "SMK"
+  * Universitas/Politeknik/D3/D4/S1/S2 → "Perguruan Tinggi"
+  * Pondok Pesantren/Madrasah Diniyah → "Pesantren/Madrasah"
+- semester: "1" atau "2" (untuk PAUD bisa dikosongkan "")
+- tahun_ajaran: format "2024/2025", atau tahun tunggal jika hanya ada satu tahun
+- nama_siswa: nama lengkap anak/siswa/santri
+- kelas: tulis apa adanya (misal "5", "IX", "Kelompok B", "X IPA 1")
+- Jika beberapa field tidak terbaca karena kualitas foto, isi dengan "" jangan skip
 
-Jika tidak dikenali: {"tipe":"UNKNOWN","alasan":"..."}
-Isi "" jika tidak tersedia.`;
+Jika tidak bisa dikenali sama sekali: {"tipe":"UNKNOWN","alasan":"jelaskan kenapa tidak bisa dibaca"}
+
+PENTING: Kembalikan HANYA JSON murni tanpa markdown, tanpa penjelasan apapun di luar JSON.`;
 
 async function extractDoc(fo){
   const b64=await toB64(fo.file),m=getMT(fo.file);
@@ -448,17 +476,19 @@ async function startProcess(){
           row.jenjang_raport=rap.jenjang;
           row.tahun_ajaran=rap.tahun_ajaran;
 
-          // Cek jenjang
-          const anakKKJenjang=anak.map(a=>normalizeJenjang(a.pendidikan));
-          const jkkOk=anakKKJenjang.includes(jDiajukan);
+          // Cek jenjang — hanya dari Raport (KK sering outdated)
           const jrapOk=rap.jenjang===jDiajukan;
 
-          if(jkkOk&&jrapOk){
+          if(jrapOk){
             row.status="VALID";
+            // Catat jika jenjang KK berbeda (informasi saja, tidak invalid)
+            const anakKKJenjang=anak.map(a=>normalizeJenjang(a.pendidikan));
+            if(!anakKKJenjang.includes(jDiajukan)){
+              row.notes.push("Info: jenjang di KK ("+row.jenjang_kk+") berbeda dari Raport — kemungkinan KK belum diperbarui");
+            }
           }else{
-            row.status="PARTIAL";
-            if(!jkkOk)row.notes.push("Jenjang KK ("+row.jenjang_kk+") tidak sesuai pengajuan ("+kar.jenjang+")");
-            if(!jrapOk)row.notes.push("Jenjang Raport ("+rap.jenjang+") tidak sesuai pengajuan ("+kar.jenjang+")");
+            row.status="INVALID";
+            row.notes.push("Jenjang Raport ("+rap.jenjang+") tidak sesuai pengajuan ("+kar.jenjang+")");
           }
         }
       }
