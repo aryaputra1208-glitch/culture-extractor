@@ -367,36 +367,33 @@ async function extractDoc(fo){
 
 // ── Claude matching — pakai AI bukan fuzzy string ──────────────
 async function claudeMatch(namaKaryawan, kkDocs, raportDocs){
-  const kkList=kkDocs.map((k,i)=>`${i}. "${k.kepala_keluarga}" (anak: ${k.anak.map(a=>a.nama).join(", ")})`).join("
-");
-  const rapList=raportDocs.map((r,i)=>`${i}. "${r.nama_siswa}" | ${r.jenjang} | ${r.tahun_ajaran}`).join("
-");
+  const kkLines = kkDocs.map((k,i) => {
+    const anakNama = k.anak.map(a=>a.nama).join(", ");
+    return i + ". " + k.kepala_keluarga + " (anak: " + anakNama + ")";
+  }).join("\n");
+  const rapLines = raportDocs.map((r,i) => {
+    return i + ". " + r.nama_siswa + " | " + r.jenjang + " | " + r.tahun_ajaran;
+  }).join("\n");
 
-  const prompt=`Tugasmu mencocokkan nama karyawan dengan dokumen KK dan Raport yang sudah diekstrak dari scan/foto.
+  const promptText = "Tugasmu mencocokkan nama karyawan dengan dokumen KK dan Raport yang sudah diekstrak dari scan/foto.\n\n"
+    + "Nama karyawan: \"" + namaKaryawan + "\"\n\n"
+    + "Daftar KK yang tersedia (indeks. nama kepala keluarga):\n"
+    + (kkLines || "(tidak ada)") + "\n\n"
+    + "Daftar Raport yang tersedia (indeks. nama siswa | jenjang | tahun ajaran):\n"
+    + (rapLines || "(tidak ada)") + "\n\n"
+    + "Instruksi:\n"
+    + "- Cocokkan nama karyawan dengan kepala keluarga di KK. Perhatikan kemungkinan salah baca OCR (huruf tertukar, kapital/kecil, spasi berbeda, karakter mirip seperti N/U/M).\n"
+    + "- Jika KK cocok, cocokkan nama anak di KK dengan nama siswa di Raport.\n"
+    + "- Kembalikan HANYA JSON murni:\n"
+    + "{\"kk_index\": null_atau_angka, \"raport_index\": null_atau_angka, \"alasan_kk\": \"\", \"alasan_raport\": \"\"}\n\n"
+    + "kk_index: indeks KK yang cocok, atau null jika tidak ada\n"
+    + "raport_index: indeks Raport yang cocok dengan anak di KK tersebut, atau null jika tidak ada\n"
+    + "alasan_kk: penjelasan singkat kenapa cocok atau tidak\n"
+    + "alasan_raport: penjelasan singkat kenapa cocok atau tidak";
 
-Nama karyawan: "${namaKaryawan}"
-
-Daftar KK yang tersedia (indeks. nama kepala keluarga):
-${kkList||"(tidak ada)"}
-
-Daftar Raport yang tersedia (indeks. nama siswa | jenjang | tahun ajaran):
-${rapList||"(tidak ada)"}
-
-Instruksi:
-- Cocokkan nama karyawan dengan kepala keluarga di KK. Perhatikan kemungkinan salah baca OCR (misal huruf tertukar, huruf kapital/kecil, spasi berbeda).
-- Jika KK cocok, cocokkan nama anak di KK dengan nama siswa di Raport.
-- Kembalikan HANYA JSON murni:
-{"kk_index": null_atau_angka, "raport_index": null_atau_angka, "alasan_kk": "", "alasan_raport": ""}
-
-kk_index: indeks KK yang cocok, atau null jika tidak ada
-raport_index: indeks Raport yang cocok dengan anak di KK tersebut, atau null jika tidak ada
-alasan_kk: penjelasan singkat kenapa cocok atau tidak
-alasan_raport: penjelasan singkat kenapa cocok atau tidak`;
-
-  const text=await callClaude([{role:"user",content:prompt}],500);
+  const text = await callClaude([{role:"user",content:promptText}], 500);
   return JSON.parse(text.replace(/```json|```/g,"").trim());
 }
-
 // ── Main process ───────────────────────────────────────────────
 async function startProcess(){
   if(busy)return;
