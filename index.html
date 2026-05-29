@@ -53,7 +53,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .prog-track{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
 .prog-fill{height:100%;background:var(--pink);border-radius:99px;transition:width .4s ease;width:0%}
 .prog-sub{font-size:11px;color:var(--muted);margin-top:5px}
-.log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:monospace;font-size:11px;color:var(--muted);max-height:80px;overflow-y:auto;display:none;margin-top:.75rem;line-height:1.7}
+.log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:monospace;font-size:11px;color:var(--muted);max-height:100px;overflow-y:auto;display:none;margin-top:.75rem;line-height:1.7}
 .lok{color:var(--green)}.lin{color:var(--blue)}.lw{color:var(--amber)}.le{color:var(--red)}.lts{color:#D1D5DB}
 .action-bar{display:flex;gap:8px;align-items:center;margin-top:1rem}
 .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:var(--sans);transition:all .15s}
@@ -138,7 +138,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="step">
     <div class="step-head">
       <div class="step-num inactive" id="sn3">3</div>
-      <div><div class="step-title">Ekstrak &amp; validasi</div><div class="step-sub">Claude membaca dokumen lalu mencocokkan dengan list karyawan</div></div>
+      <div><div class="step-title">Ekstrak &amp; validasi</div><div class="step-sub">Claude membaca dokumen, mencocokkan nama dengan AI, lalu memvalidasi jenjang</div></div>
     </div>
     <div class="action-bar">
       <button class="btn btn-pink" id="btnGo" disabled onclick="startProcess()">&#9889; Mulai Ekstrak &amp; Validasi</button>
@@ -153,12 +153,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     <div class="log" id="log"></div>
   </div>
 
-  <!-- STEP 4: Hasil -->
+  <!-- STEP 4 -->
   <div class="step" id="resultSection" style="display:none">
     <div class="step-head">
       <div class="step-num done">4</div>
       <div><div class="step-title">Hasil validasi</div><div class="step-sub" id="resultSub"></div></div>
-      <div style="margin-left:auto;display:flex;gap:8px">
+      <div style="margin-left:auto">
         <button class="btn btn-green btn-sm" onclick="downloadResult()">&#11015; Download Excel</button>
       </div>
     </div>
@@ -188,121 +188,101 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <script>
-// ── Config ─────────────────────────────────────────────────────
-const LS = "ant_bsw_v4";
-let cfg = {};
-try { cfg = JSON.parse(localStorage.getItem(LS) || "{}"); } catch(e) {}
+const LS="ant_bsw_v4";
+let cfg={};
+try{cfg=JSON.parse(localStorage.getItem(LS)||"{}");}catch(e){}
+let WORKER_URL=cfg.worker||"";
+let SHEETS_URL=cfg.sheets||"";
+if(!WORKER_URL){WORKER_URL=prompt("Cloudflare Worker URL:","https://culture-extractor.arya-putra1208.workers.dev/")||"";cfg.worker=WORKER_URL;}
+if(!SHEETS_URL){SHEETS_URL=prompt("Google Apps Script URL:","");cfg.sheets=SHEETS_URL;}
+localStorage.setItem(LS,JSON.stringify(cfg));
 
-let WORKER_URL = cfg.worker || "";
-let SHEETS_URL = cfg.sheets || "";
+let karyawanList=[],docFiles=[],resultData=[],busy=false;
 
-if (!WORKER_URL) {
-  WORKER_URL = prompt("Cloudflare Worker URL:", "https://culture-extractor.arya-putra1208.workers.dev/") || "";
-  cfg.worker = WORKER_URL;
-}
-if (!SHEETS_URL) {
-  SHEETS_URL = prompt("Google Apps Script URL:", "") || "";
-  cfg.sheets = SHEETS_URL;
-}
-localStorage.setItem(LS, JSON.stringify(cfg));
-
-// ── State ──────────────────────────────────────────────────────
-let karyawanList = [], docFiles = [], resultData = [], busy = false;
-
-// ── Template ───────────────────────────────────────────────────
-function downloadTemplate() {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([
-    ["Nama Karyawan","Jenjang Diajukan"],
-    ["Andrian","SMP"],["Budi Santoso","SMA"],["Dewi Rahayu","SD"]
-  ]);
-  ws["!cols"] = [{wch:28},{wch:18}];
-  XLSX.utils.book_append_sheet(wb, ws, "List Karyawan");
-  XLSX.writeFile(wb, "template_list_karyawan.xlsx");
+function downloadTemplate(){
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet([["Nama Karyawan","Jenjang Diajukan"],["Andrian","SMP"],["Budi Santoso","SMA"],["Dewi Rahayu","SD"]]);
+  ws["!cols"]=[{wch:28},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,"List Karyawan");
+  XLSX.writeFile(wb,"template_list_karyawan.xlsx");
 }
 
-// ── Upload karyawan ────────────────────────────────────────────
-const dzK = document.getElementById("dzK");
-dzK.addEventListener("dragover", e=>{e.preventDefault();dzK.classList.add("drag");});
-dzK.addEventListener("dragleave", ()=>dzK.classList.remove("drag"));
-dzK.addEventListener("drop", e=>{e.preventDefault();dzK.classList.remove("drag");loadKaryawan(e.dataTransfer.files[0]);});
-document.getElementById("fiK").addEventListener("change", e=>loadKaryawan(e.target.files[0]));
+const dzK=document.getElementById("dzK");
+dzK.addEventListener("dragover",e=>{e.preventDefault();dzK.classList.add("drag");});
+dzK.addEventListener("dragleave",()=>dzK.classList.remove("drag"));
+dzK.addEventListener("drop",e=>{e.preventDefault();dzK.classList.remove("drag");loadKaryawan(e.dataTransfer.files[0]);});
+document.getElementById("fiK").addEventListener("change",e=>loadKaryawan(e.target.files[0]));
 
-function loadKaryawan(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const wb = XLSX.read(e.target.result, {type:"binary"});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, {header:1});
-    karyawanList = rows.slice(1).filter(r=>r[0]).map(r=>({
-      nama: String(r[0]).trim(),
-      jenjang: String(r[1]||"").trim()
-    }));
-    renderKPrev(); checkReady();
+function loadKaryawan(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:"binary"});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+    karyawanList=rows.slice(1).filter(r=>r[0]).map(r=>({nama:String(r[0]).trim(),jenjang:String(r[1]||"").trim()}));
+    renderKPrev();checkReady();
   };
   reader.readAsBinaryString(file);
 }
 
-function renderKPrev() {
-  const prev = document.getElementById("kPrev");
-  if (!karyawanList.length) { prev.style.display="none"; return; }
-  prev.style.display = "block";
-  document.getElementById("kCount").textContent = karyawanList.length + " karyawan dimuat";
-  document.getElementById("kBody").innerHTML = karyawanList.slice(0,10).map((k,i)=>
+function renderKPrev(){
+  const prev=document.getElementById("kPrev");
+  if(!karyawanList.length){prev.style.display="none";return;}
+  prev.style.display="block";
+  document.getElementById("kCount").textContent=karyawanList.length+" karyawan dimuat";
+  document.getElementById("kBody").innerHTML=karyawanList.slice(0,10).map((k,i)=>
     `<tr><td style="color:var(--muted)">${i+1}</td><td>${k.nama}</td><td>${k.jenjang||"-"}</td></tr>`
-  ).join("") + (karyawanList.length>10?`<tr><td colspan="3" style="color:var(--muted);text-align:center;font-style:italic">...+${karyawanList.length-10} lainnya</td></tr>`:"");
+  ).join("")+(karyawanList.length>10?`<tr><td colspan="3" style="color:var(--muted);text-align:center;font-style:italic">...+${karyawanList.length-10} lainnya</td></tr>`:"");
   dzK.classList.add("loaded");
   document.getElementById("sn1").classList.remove("inactive");
   document.getElementById("sn2").classList.remove("inactive");
 }
 
-// ── Upload dokumen ─────────────────────────────────────────────
-const dzD = document.getElementById("dzD");
-dzD.addEventListener("dragover", e=>{e.preventDefault();dzD.classList.add("drag");});
-dzD.addEventListener("dragleave", ()=>dzD.classList.remove("drag"));
-dzD.addEventListener("drop", e=>{e.preventDefault();dzD.classList.remove("drag");addDocs(e.dataTransfer.files);});
-document.getElementById("fiD").addEventListener("change", e=>addDocs(e.target.files));
+const dzD=document.getElementById("dzD");
+dzD.addEventListener("dragover",e=>{e.preventDefault();dzD.classList.add("drag");});
+dzD.addEventListener("dragleave",()=>dzD.classList.remove("drag"));
+dzD.addEventListener("drop",e=>{e.preventDefault();dzD.classList.remove("drag");addDocs(e.dataTransfer.files);});
+document.getElementById("fiD").addEventListener("change",e=>addDocs(e.target.files));
 
-function addDocs(nf) {
-  for (const f of nf) {
-    if (!docFiles.find(x=>x.name===f.name&&x.size===f.size))
+function addDocs(nf){
+  for(const f of nf){
+    if(!docFiles.find(x=>x.name===f.name&&x.size===f.size))
       docFiles.push({file:f,name:f.name,size:f.size,status:"pending",type:null});
   }
-  renderQueue(); checkReady();
+  renderQueue();checkReady();
 }
 
-function renderQueue() {
-  const q = document.getElementById("queue");
-  if (!docFiles.length) { q.innerHTML=""; return; }
-  q.innerHTML = docFiles.map(f=>{
-    const sz = (f.size/1024).toFixed(0)+" KB";
-    const b = f.status==="pending"?'<span class="pill pp">menunggu</span>'
+function renderQueue(){
+  const q=document.getElementById("queue");
+  if(!docFiles.length){q.innerHTML="";return;}
+  q.innerHTML=docFiles.map(f=>{
+    const sz=(f.size/1024).toFixed(0)+" KB";
+    const b=f.status==="pending"?'<span class="pill pp">menunggu</span>'
       :f.status==="processing"?'<span class="pill ppr pulse">&#9881; memproses</span>'
       :f.type==="KK"?'<span class="pill pk">&#10003; KK</span>'
       :f.type==="Raport"?'<span class="pill pr">&#10003; Raport</span>'
       :f.status==="error"?'<span class="pill pe">&#10007; gagal</span>'
       :'<span class="pill pp">-</span>';
-    return `<div class="qi"><span class="qn">${f.name}</span><span class="qs">${sz}</span>${b}</div>`;
+    return`<div class="qi"><span class="qn">${f.name}</span><span class="qs">${sz}</span>${b}</div>`;
   }).join("");
 }
 
-function checkReady() {
-  const n = docFiles.filter(f=>f.status==="pending").length;
-  const ok = karyawanList.length>0 && n>0;
-  document.getElementById("btnGo").disabled = !ok||busy;
-  document.getElementById("readyNote").textContent = ok ? karyawanList.length+" karyawan · "+n+" dokumen siap" : "";
-  if (n>0) document.getElementById("sn3").classList.remove("inactive");
+function checkReady(){
+  const n=docFiles.filter(f=>f.status==="pending").length;
+  const ok=karyawanList.length>0&&n>0;
+  document.getElementById("btnGo").disabled=!ok||busy;
+  document.getElementById("readyNote").textContent=ok?karyawanList.length+" karyawan · "+n+" dokumen siap":"";
+  if(n>0)document.getElementById("sn3").classList.remove("inactive");
 }
 
-// ── Helpers ────────────────────────────────────────────────────
-function addLog(msg,t) {
-  const el=document.getElementById("log"); el.style.display="block";
+function addLog(msg,t){
+  const el=document.getElementById("log");el.style.display="block";
   const ts=new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
   el.innerHTML+=`<div><span class="lts">[${ts}]</span> <span class="l${t}">${msg}</span></div>`;
   el.scrollTop=el.scrollHeight;
 }
-function setP(pct,label,sub="") {
+function setP(pct,label,sub=""){
   document.getElementById("pw").style.display="block";
   document.getElementById("pf").style.width=pct+"%";
   document.getElementById("pp").textContent=pct+"%";
@@ -312,51 +292,28 @@ function setP(pct,label,sub="") {
 async function toB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});}
 function getMT(file){const e=file.name.split(".").pop().toLowerCase();if(e==="pdf")return"application/pdf";if(e==="png")return"image/png";if(e==="webp")return"image/webp";return"image/jpeg";}
 
-// ── Fuzzy matching (diperbaiki) ────────────────────────────────
-function normalize(s) {
-  return (s||"").toLowerCase()
-    .replace(/[^a-z0-9 ]/g,"")
-    .replace(/\s+/g," ").trim();
-}
-
-function similarity(a,b) {
-  a=normalize(a); b=normalize(b);
-  if(!a||!b) return 0;
-  if(a===b) return 1;
-  // Exact token match
-  const ta=a.split(" "), tb=b.split(" ");
-  const setA=new Set(ta), setB=new Set(tb);
-  const inter=[...setA].filter(t=>setB.has(t)).length;
-  const union=new Set([...setA,...setB]).size;
-  const jaccard=inter/union;
-  // Contains bonus
-  const cont=(a.includes(b)||b.includes(a))?0.2:0;
-  // First word match bonus (kepala keluarga sering cuma nama depan)
-  const firstMatch=(ta[0]===tb[0])?0.15:0;
-  return Math.min(1, jaccard+cont+firstMatch);
-}
-
-function findBestMatch(name, candidates, threshold=0.3) {
-  let best=null, bestScore=0;
-  for (const c of candidates) {
-    const score=similarity(name, c.key||c);
-    if(score>bestScore){bestScore=score;best=c;}
-  }
-  return bestScore>=threshold?{match:best,score:bestScore}:null;
-}
-
-function normalizeJenjang(j) {
-  if(!j) return "";
+function normalizeJenjang(j){
+  if(!j)return"";
   const t=j.toUpperCase().replace(/[^A-Z0-9 ]/g,"");
-  if(/SD|DASAR|IBTIDAIYAH/.test(t)) return "SD";
-  if(/SMP|PERTAMA|MTS/.test(t)) return "SMP";
-  if(/SMA|SMK|ALIYAH|ATAS/.test(t)) return "SMA";
-  if(/PERGURUAN|UNIVERSITAS|POLITEKNIK|INSTITUT|S1|S2|D3|D4/.test(t)) return "Perguruan Tinggi";
+  if(/SD|DASAR|IBTIDAIYAH/.test(t))return"SD";
+  if(/SMP|PERTAMA|MTS/.test(t))return"SMP";
+  if(/SMA|SMK|ALIYAH|ATAS/.test(t))return"SMA";
+  if(/PERGURUAN|UNIVERSITAS|POLITEKNIK|INSTITUT|S1|S2|D3|D4/.test(t))return"Perguruan Tinggi";
   return j.trim();
 }
 
-// ── Ekstraksi ──────────────────────────────────────────────────
-const PROMPT=`Kamu adalah sistem ekstraksi dokumen untuk validasi beasiswa karyawan. Tentukan tipe dokumen dan ekstrak data.
+// ── Claude API call ────────────────────────────────────────────
+async function callClaude(messages, maxTokens=1500){
+  const r=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({max_tokens:maxTokens,messages})});
+  if(!r.ok)throw new Error("Worker "+r.status);
+  const d=await r.json();
+  if(d.error)throw new Error(d.error);
+  return d.content.map(c=>c.text||"").join("").trim();
+}
+
+// ── Ekstrak dokumen ────────────────────────────────────────────
+const PROMPT_EXTRACT=`Kamu adalah sistem ekstraksi dokumen untuk validasi beasiswa karyawan. Tentukan tipe dokumen dan ekstrak data.
 
 Kembalikan HANYA JSON murni (tanpa markdown):
 
@@ -371,44 +328,79 @@ Jika RAPORT ANAK:
 Jika tidak dikenali: {"tipe":"UNKNOWN","alasan":"..."}
 Isi "" jika tidak tersedia.`;
 
-async function extractDoc(fo) {
-  const b64=await toB64(fo.file), m=getMT(fo.file);
+async function extractDoc(fo){
+  const b64=await toB64(fo.file),m=getMT(fo.file);
   const item=m==="application/pdf"
     ?{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}}
     :{type:"image",source:{type:"base64",media_type:m,data:b64}};
-  const r=await fetch(WORKER_URL,{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({max_tokens:1500,messages:[{role:"user",content:[item,{type:"text",text:PROMPT}]}]})});
-  if(!r.ok) throw new Error("Worker "+r.status);
-  const d=await r.json();
-  if(d.error) throw new Error(d.error);
-  return JSON.parse(d.content.map(c=>c.text||"").join("").trim().replace(/```json|```/g,"").trim());
+  const text=await callClaude([{role:"user",content:[item,{type:"text",text:PROMPT_EXTRACT}]}]);
+  return JSON.parse(text.replace(/```json|```/g,"").trim());
+}
+
+// ── Claude matching — pakai AI bukan fuzzy string ──────────────
+async function claudeMatch(namaKaryawan, kkDocs, raportDocs){
+  const kkList=kkDocs.map((k,i)=>`${i}. "${k.kepala_keluarga}" (anak: ${k.anak.map(a=>a.nama).join(", ")})`).join("
+");
+  const rapList=raportDocs.map((r,i)=>`${i}. "${r.nama_siswa}" | ${r.jenjang} | ${r.tahun_ajaran}`).join("
+");
+
+  const prompt=`Tugasmu mencocokkan nama karyawan dengan dokumen KK dan Raport yang sudah diekstrak dari scan/foto.
+
+Nama karyawan: "${namaKaryawan}"
+
+Daftar KK yang tersedia (indeks. nama kepala keluarga):
+${kkList||"(tidak ada)"}
+
+Daftar Raport yang tersedia (indeks. nama siswa | jenjang | tahun ajaran):
+${rapList||"(tidak ada)"}
+
+Instruksi:
+- Cocokkan nama karyawan dengan kepala keluarga di KK. Perhatikan kemungkinan salah baca OCR (misal huruf tertukar, huruf kapital/kecil, spasi berbeda).
+- Jika KK cocok, cocokkan nama anak di KK dengan nama siswa di Raport.
+- Kembalikan HANYA JSON murni:
+{"kk_index": null_atau_angka, "raport_index": null_atau_angka, "alasan_kk": "", "alasan_raport": ""}
+
+kk_index: indeks KK yang cocok, atau null jika tidak ada
+raport_index: indeks Raport yang cocok dengan anak di KK tersebut, atau null jika tidak ada
+alasan_kk: penjelasan singkat kenapa cocok atau tidak
+alasan_raport: penjelasan singkat kenapa cocok atau tidak`;
+
+  const text=await callClaude([{role:"user",content:prompt}],500);
+  return JSON.parse(text.replace(/```json|```/g,"").trim());
 }
 
 // ── Main process ───────────────────────────────────────────────
-async function startProcess() {
-  if(busy) return;
+async function startProcess(){
+  if(busy)return;
   busy=true;
   document.getElementById("btnGo").disabled=true;
   document.getElementById("resultSection").style.display="none";
 
   const toProc=docFiles.filter(f=>f.status==="pending");
-  const kkDocs=[], raportDocs=[];
+  const kkDocs=[],raportDocs=[];
+  const kkRows=[],raportRows=[];
 
-  // FASE 1: Ekstrak
+  // FASE 1: Ekstrak semua dokumen
   addLog("Fase 1: Ekstrak "+toProc.length+" dokumen...","in");
   for(let i=0;i<toProc.length;i++){
-    const f=toProc[i]; f.status="processing"; renderQueue();
-    setP(Math.round(i/toProc.length*60),"Mengekstrak dokumen",(i+1)+"/"+toProc.length+": "+f.name);
+    const f=toProc[i];f.status="processing";renderQueue();
+    setP(Math.round(i/toProc.length*50),"Mengekstrak dokumen",(i+1)+"/"+toProc.length+": "+f.name);
     addLog("Membaca: "+f.name,"in");
     try{
       const r=await extractDoc(f);
       if(r.tipe==="KK"){
         f.status="done";f.type="KK";
-        kkDocs.push({kepala_keluarga:r.kepala_keluarga,anak:r.anak||[],sumber:f.name});
+        kkDocs.push({kepala_keluarga:r.kepala_keluarga,anak:r.anak||[],no_kk:r.no_kk,sumber:f.name});
+        // Untuk Sheets KK
+        (r.anak||[]).forEach(a=>{
+          kkRows.push({sumber:f.name,no_kk:r.no_kk,kepala_keluarga:r.kepala_keluarga,nama:a.nama,jenis_kelamin:a.jenis_kelamin,tanggal_lahir:a.tanggal_lahir,pendidikan:a.pendidikan});
+        });
+        if(!(r.anak||[]).length) kkRows.push({sumber:f.name,no_kk:r.no_kk,kepala_keluarga:r.kepala_keluarga,nama:"",jenis_kelamin:"",tanggal_lahir:"",pendidikan:""});
         addLog("&#10003; KK: "+r.kepala_keluarga+" ("+(r.anak||[]).length+" anak)","ok");
       }else if(r.tipe==="Raport"){
         f.status="done";f.type="Raport";
-        raportDocs.push({nama_siswa:r.nama_siswa,jenjang:normalizeJenjang(r.jenjang),tahun_ajaran:r.tahun_ajaran,kelas:r.kelas,sumber:f.name});
+        raportDocs.push({nama_siswa:r.nama_siswa,jenjang:normalizeJenjang(r.jenjang),tahun_ajaran:r.tahun_ajaran,kelas:r.kelas,nama_sekolah:r.nama_sekolah,semester:r.semester,sumber:f.name});
+        raportRows.push({sumber:f.name,nama_siswa:r.nama_siswa,jenjang:normalizeJenjang(r.jenjang),nama_sekolah:r.nama_sekolah,kelas:r.kelas,semester:r.semester?"Semester "+r.semester:"",tahun_ajaran:r.tahun_ajaran});
         addLog("&#10003; Raport: "+r.nama_siswa+" | "+r.jenjang,"ok");
       }else{
         f.status="error";
@@ -418,67 +410,61 @@ async function startProcess() {
     renderQueue();
   }
 
-  // FASE 2: Matching
-  addLog("Fase 2: Mencocokkan "+karyawanList.length+" karyawan...","in");
-  setP(65,"Mencocokkan data karyawan...","");
+  // FASE 2: Claude matching per karyawan
+  addLog("Fase 2: AI matching "+karyawanList.length+" karyawan...","in");
   resultData=[];
 
-  for(const kar of karyawanList){
-    const jDiajukan=normalizeJenjang(kar.jenjang);
+  for(let i=0;i<karyawanList.length;i++){
+    const kar=karyawanList[i];
+    setP(50+Math.round(i/karyawanList.length*35),"AI matching karyawan",(i+1)+"/"+karyawanList.length+": "+kar.nama);
+    addLog("Mencocokkan: "+kar.nama,"in");
+
     let row={
-      nama_karyawan:kar.nama, jenjang_diajukan:kar.jenjang,
-      nama_anak_kk:"", jenjang_kk:"",
-      nama_siswa_raport:"", jenjang_raport:"", tahun_ajaran:"",
-      status:"", notes:[]
+      nama_karyawan:kar.nama,jenjang_diajukan:kar.jenjang,
+      nama_anak_kk:"",jenjang_kk:"",
+      nama_siswa_raport:"",jenjang_raport:"",tahun_ajaran:"",
+      status:"",notes:[]
     };
 
-    // Match karyawan → KK
-    const kkMatch=findBestMatch(kar.nama, kkDocs.map(k=>({key:k.kepala_keluarga,data:k})), 0.25);
+    try{
+      const match=await claudeMatch(kar.nama,kkDocs,raportDocs);
+      const jDiajukan=normalizeJenjang(kar.jenjang);
 
-    if(!kkMatch){
-      row.status="INVALID";
-      row.notes.push("KK tidak ditemukan (nama kepala keluarga tidak cocok)");
-    }else{
-      const kk=kkMatch.match.data;
-      const anak=kk.anak||[];
-      if(!anak.length){
+      if(match.kk_index===null||match.kk_index===undefined){
         row.status="INVALID";
-        row.notes.push("KK ditemukan ("+kk.kepala_keluarga+") tapi tidak ada data anak");
+        row.notes.push("KK tidak ditemukan: "+match.alasan_kk);
       }else{
+        const kk=kkDocs[match.kk_index];
+        const anak=kk.anak||[];
         row.nama_anak_kk=anak.map(a=>a.nama).join(", ");
         row.jenjang_kk=anak.map(a=>a.pendidikan||"-").join(", ");
 
-        // Match anak → Raport
-        const rapCand=raportDocs.map(r=>({key:r.nama_siswa,data:r}));
-        let rapMatch=null;
-        for(const a of anak){
-          const m=findBestMatch(a.nama,rapCand,0.3);
-          if(m){rapMatch=m;break;}
-        }
-
-        if(!rapMatch){
+        if(match.raport_index===null||match.raport_index===undefined){
           row.status="PARTIAL";
-          row.notes.push("KK ditemukan tapi Raport tidak ditemukan");
+          row.notes.push("KK ditemukan ("+kk.kepala_keluarga+"). Raport tidak ditemukan: "+match.alasan_raport);
         }else{
-          const rap=rapMatch.match.data;
+          const rap=raportDocs[match.raport_index];
           row.nama_siswa_raport=rap.nama_siswa;
           row.jenjang_raport=rap.jenjang;
           row.tahun_ajaran=rap.tahun_ajaran;
 
           // Cek jenjang
-          const anakJenjangKK=anak.find(a=>normalizeJenjang(a.pendidikan)===jDiajukan);
-          const jkkOk=!!anakJenjangKK;
+          const anakKKJenjang=anak.map(a=>normalizeJenjang(a.pendidikan));
+          const jkkOk=anakKKJenjang.includes(jDiajukan);
           const jrapOk=rap.jenjang===jDiajukan;
 
           if(jkkOk&&jrapOk){
             row.status="VALID";
           }else{
             row.status="PARTIAL";
-            if(!jkkOk) row.notes.push("Jenjang di KK ("+row.jenjang_kk+") tidak sesuai pengajuan ("+kar.jenjang+")");
-            if(!jrapOk) row.notes.push("Jenjang di Raport ("+rap.jenjang+") tidak sesuai pengajuan ("+kar.jenjang+")");
+            if(!jkkOk)row.notes.push("Jenjang KK ("+row.jenjang_kk+") tidak sesuai pengajuan ("+kar.jenjang+")");
+            if(!jrapOk)row.notes.push("Jenjang Raport ("+rap.jenjang+") tidak sesuai pengajuan ("+kar.jenjang+")");
           }
         }
       }
+    }catch(e){
+      row.status="INVALID";
+      row.notes.push("Error matching: "+e.message);
     }
 
     row.notes=row.notes.join("; ")||"-";
@@ -487,36 +473,43 @@ async function startProcess() {
       row.status==="VALID"?"ok":row.status==="PARTIAL"?"w":"e");
   }
 
-  setP(80,"Menyimpan ke Google Sheets...","");
-
-  // Kirim ke Sheets
+  // FASE 3: Kirim ke Sheets
+  setP(88,"Menyimpan ke Google Sheets...","");
   const bid="VAL-"+Date.now().toString(36).toUpperCase();
   let sheetsOk=false;
+
   if(SHEETS_URL){
     try{
-      const r=await fetch(SHEETS_URL,{method:"POST",body:JSON.stringify({
-        action:"submit_validasi", batch_id:bid, submitted_by:"PIC",
+      // Kirim KK + Raport rows
+      if(kkRows.length||raportRows.length){
+        const r1=await fetch(SHEETS_URL,{method:"POST",body:JSON.stringify({
+          action:"submit_batch",batch_id:bid,submitted_by:"PIC",
+          total_files:toProc.length,kk_rows:kkRows,raport_rows:raportRows,failed_files:[]
+        })});
+        const d1=await r1.json();
+        if(d1.status==="ok") addLog("&#10003; KK & Raport tersimpan ke Sheets","ok");
+      }
+      // Kirim hasil validasi
+      const r2=await fetch(SHEETS_URL,{method:"POST",body:JSON.stringify({
+        action:"submit_validasi",batch_id:bid,submitted_by:"PIC",
         rows:resultData.map(r=>({
-          nama_karyawan:r.nama_karyawan, jenjang_diajukan:r.jenjang_diajukan,
-          nama_anak_kk:r.nama_anak_kk, jenjang_kk:r.jenjang_kk,
-          nama_siswa_raport:r.nama_siswa_raport, jenjang_raport:r.jenjang_raport,
-          tahun_ajaran:r.tahun_ajaran, status:r.status, notes:r.notes
+          nama_karyawan:r.nama_karyawan,jenjang_diajukan:r.jenjang_diajukan,
+          nama_anak_kk:r.nama_anak_kk,jenjang_kk:r.jenjang_kk,
+          nama_siswa_raport:r.nama_siswa_raport,jenjang_raport:r.jenjang_raport,
+          tahun_ajaran:r.tahun_ajaran,status:r.status,notes:r.notes
         }))
       })});
-      const d=await r.json();
-      if(d.status==="ok"){
-        sheetsOk=true;
-        addLog("&#10003; Tersimpan ke Google Sheets ("+d.saved+" baris)","ok");
-      }else addLog("&#10007; Gagal simpan Sheets: "+(d.message||"error"),"e");
+      const d2=await r2.json();
+      if(d2.status==="ok"){sheetsOk=true;addLog("&#10003; Hasil validasi tersimpan ke Sheets ("+d2.saved+" baris)","ok");}
     }catch(e){addLog("&#10007; Gagal kirim ke Sheets: "+e.message,"e");}
   }
 
   setP(100,"Selesai!","");
-  renderResult(sheetsOk, bid);
+  renderResult(sheetsOk,bid);
   busy=false;
 }
 
-function renderResult(sheetsOk, bid) {
+function renderResult(sheetsOk,bid){
   const valid=resultData.filter(r=>r.status==="VALID").length;
   const invalid=resultData.filter(r=>r.status==="INVALID").length;
   const partial=resultData.filter(r=>r.status==="PARTIAL").length;
@@ -525,13 +518,9 @@ function renderResult(sheetsOk, bid) {
   document.getElementById("rI").textContent=invalid;
   document.getElementById("rP").textContent=partial;
   document.getElementById("resultSub").textContent=valid+" valid · "+partial+" partial · "+invalid+" tidak valid";
-
   const sb=document.getElementById("sheetsBar");
-  if(sheetsOk){
-    sb.style.display="flex";
-    document.getElementById("sheetsMsg").textContent="Tersimpan ke Google Sheets — Batch "+bid;
-  }else sb.style.display="none";
-
+  if(sheetsOk){sb.style.display="flex";document.getElementById("sheetsMsg").textContent="Tersimpan ke Google Sheets — Batch "+bid;}
+  else sb.style.display="none";
   document.getElementById("resultBody").innerHTML=resultData.map(r=>{
     const badge=r.status==="VALID"?'<span class="sv sv-v">&#10003; Valid</span>'
       :r.status==="PARTIAL"?'<span class="sv sv-p">&#9888; Partial</span>'
@@ -548,12 +537,11 @@ function renderResult(sheetsOk, bid) {
       <td class="notes-cell">${r.notes}</td>
     </tr>`;
   }).join("");
-
   document.getElementById("resultSection").style.display="block";
   document.getElementById("resultSection").scrollIntoView({behavior:"smooth"});
 }
 
-function downloadResult() {
+function downloadResult(){
   const wb=XLSX.utils.book_new();
   const header=["Nama Karyawan","Jenjang Diajukan","Nama Anak (KK)","Jenjang KK","Nama Siswa (Raport)","Jenjang Raport","Tahun Ajaran Raport","Status","Notes"];
   const rows=[header,...resultData.map(r=>[r.nama_karyawan,r.jenjang_diajukan,r.nama_anak_kk,r.jenjang_kk,r.nama_siswa_raport,r.jenjang_raport,r.tahun_ajaran,r.status,r.notes])];
@@ -563,7 +551,7 @@ function downloadResult() {
   XLSX.writeFile(wb,"validasi_beasiswa_"+new Date().toISOString().slice(0,10)+".xlsx");
 }
 
-function resetAll() {
+function resetAll(){
   karyawanList=[];docFiles=[];resultData=[];
   document.getElementById("kPrev").style.display="none";
   document.getElementById("queue").innerHTML="";
