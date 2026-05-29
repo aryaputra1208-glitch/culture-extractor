@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beasiswa Anak Karyawan — Anteraja</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#E8197C;--pink-light:#FCE4F1;--pink-dark:#B5125E;
+  --green:#16A34A;--green-bg:#DCFCE7;
+  --amber:#D97706;--amber-bg:#FEF3C7;
+  --red:#DC2626;--red-bg:#FEE2E2;
+  --blue:#2563EB;--blue-bg:#DBEAFE;
+  --bg:#F5F6F7;--white:#FFFFFF;
+  --text:#111827;--muted:#6B7280;--border:#E5E7EB;--border2:#D1D5DB;
+  --sans:'Inter',sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --shm:0 4px 8px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.04);
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;height:54px;gap:12px;position:sticky;top:0;z-index:50;box-shadow:var(--sh)}
+.ndiv{width:1px;height:18px;background:var(--border)}
+.ntitle{font-size:12px;color:var(--muted);font-weight:500}
+.nright{margin-left:auto;display:flex;align-items:center;gap:8px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--pink-light);color:var(--pink);font-weight:600;font-size:11px;display:flex;align-items:center;justify-content:center}
+.btn-ghost{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px}
+.btn-ghost:hover{background:var(--bg);color:var(--text)}
+.wrap{max-width:860px;margin:0 auto;padding:1.5rem}
+.setup-outer{min-height:calc(100vh - 54px);display:flex;align-items:center;justify-content:center;padding:2rem}
+.setup-card{background:var(--white);border-radius:14px;border:1px solid var(--border);box-shadow:var(--shm);padding:2.25rem;width:100%;max-width:460px}
+.setup-head{text-align:center;margin-bottom:1.5rem}
+.setup-head h1{font-size:17px;font-weight:600;margin-top:12px;color:var(--text)}
+.setup-head p{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.6}
+.conn-banner{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;font-size:12px;font-weight:500;margin-bottom:1rem}
+.ci{background:#F9FAFB;border:1px solid var(--border);color:var(--muted)}
+.co{background:var(--green-bg);border:1px solid #86EFAC;color:var(--green)}
+.ce{background:var(--red-bg);border:1px solid #FCA5A5;color:var(--red)}
+.cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.di{background:#9CA3AF}.do{background:var(--green)}.de{background:var(--red)}
+.field{margin-bottom:.875rem}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text);margin-bottom:5px}
+.field input{width:100%;padding:9px 12px;border:1.5px solid var(--border2);border-radius:8px;font-size:13px;font-family:var(--sans);color:var(--text);background:var(--white);transition:border .15s,box-shadow .15s}
+.field input:focus{outline:none;border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-light)}
+.field input::placeholder{color:#9CA3AF}
+.hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:var(--sans);transition:all .15s}
+.btn-pink{background:var(--pink);color:#fff}.btn-pink:hover{background:var(--pink-dark)}
+.btn-pink:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-outline{background:var(--white);border:1.5px solid var(--border2);color:var(--text)}.btn-outline:hover{border-color:var(--pink);color:var(--pink)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+.sync-bar{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:10px 16px;display:flex;align-items:center;gap:8px;margin-bottom:1.125rem;box-shadow:var(--sh);flex-wrap:wrap;gap:6px}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sok{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.3)}.serr{background:var(--red)}
+.sl{font-size:12px;color:var(--muted)}
+.sv{font-size:12px;font-weight:600;color:var(--text)}
+.sep{color:var(--border2);font-size:12px;margin:0 2px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1.125rem}
+.sc{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:var(--sh)}
+.sc-label{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.sc-val{font-size:22px;font-weight:700;margin-top:4px;line-height:1}
+.vp{color:var(--pink)}.vg{color:var(--green)}.va{color:var(--amber)}.vb{color:var(--blue)}
+.sc-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.sec-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.dz{background:var(--white);border:2px dashed var(--border2);border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;margin-bottom:.75rem;box-shadow:var(--sh)}
+.dz:hover,.dz.drag{border-color:var(--pink);background:var(--pink-light)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-t{font-size:13px;color:var(--muted)}.dz-t strong{color:var(--pink);font-weight:600}
+.dz-s{font-size:11px;color:#9CA3AF;margin-top:4px}
+.queue{display:flex;flex-direction:column;gap:5px;margin-bottom:.75rem;max-height:200px;overflow-y:auto}
+.qi{display:flex;align-items:center;gap:9px;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font-size:12px;box-shadow:var(--sh)}
+.qn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:500}
+.qs{color:var(--muted);min-width:50px;text-align:right;font-size:11px}
+.pill{display:inline-flex;font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.pp{background:#F3F4F6;color:var(--muted)}
+.ppr{background:var(--blue-bg);color:var(--blue)}
+.pk{background:var(--pink-light);color:var(--pink)}
+.pr{background:var(--green-bg);color:var(--green)}
+.pd{background:var(--amber-bg);color:var(--amber)}
+.pe{background:var(--red-bg);color:var(--red)}
+.prog-wrap{display:none;background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:.75rem;box-shadow:var(--sh)}
+.prog-top{display:flex;justify-content:space-between;font-size:12px;font-weight:500;color:var(--text);margin-bottom:7px}
+.prog-track{height:5px;background:var(--bg);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:var(--pink);border-radius:99px;transition:width .4s ease;width:0%}
+.prog-sub{font-size:11px;color:var(--muted);margin-top:5px}
+.actions{display:flex;gap:8px;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
+.dup-note{font-size:11px;color:var(--amber);font-weight:500;display:none}
+.log{background:#F9FAFB;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:'Courier New',monospace;font-size:11px;color:var(--muted);max-height:90px;overflow-y:auto;display:none;margin-bottom:.875rem;line-height:1.7}
+.lok{color:var(--green)}.lin{color:var(--blue)}.lw{color:var(--amber)}.le{color:var(--red)}.lts{color:#D1D5DB}
+.result{background:var(--white);border:1px solid var(--border);border-left:3px solid var(--pink);border-radius:10px;padding:1.125rem 1.25rem;display:none;margin-bottom:.875rem;box-shadow:var(--sh)}
+.result h3{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.rg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ri-label{font-size:11px;color:var(--muted);margin-bottom:2px}
+.ri-val{font-size:13px;font-weight:600;color:var(--text)}
+.rok{color:var(--green)}.rw{color:var(--amber)}.re{color:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulse{animation:pulse 1s ease infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .7s linear infinite;display:inline-block}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <img src="data:image/png;base64,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" style="height:32px;width:auto" alt="Anteraja">
+  <div class="ndiv"></div>
+  <span class="ntitle">Program Beasiswa Anak Karyawan</span>
+  <div class="nright" id="navRight" style="display:none">
+    <div class="avatar" id="navAvatar">—</div>
+    <span style="font-size:12px;color:var(--muted)" id="navName">—</span>
+    <button class="btn-ghost" onclick="logout()">Ganti</button>
+  </div>
+</nav>
+
+<!-- Setup screen -->
+<div id="setupScreen">
+  <div class="setup-outer">
+    <div class="setup-card">
+      <div class="setup-head">
+        <img src="data:image/png;base64,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" style="height:44px;width:auto" alt="Anteraja">
+        <h1>Setup koneksi</h1>
+        <p>Masukkan URL Worker dan Sheets, lalu isi nama Anda untuk mulai.</p>
+      </div>
+      <div id="connBanner" class="conn-banner ci"><div class="cdot di" id="connDot"></div><span id="connMsg">Belum terhubung</span></div>
+      <div class="field">
+        <label>Cloudflare Worker URL</label>
+        <input type="url" id="workerUrl" placeholder="https://beasiswa-proxy.namakamu.workers.dev">
+        <div class="hint">URL didapat setelah deploy Worker — lihat panduan setup.</div>
+      </div>
+      <div class="field">
+        <label>Google Apps Script URL</label>
+        <input type="url" id="scriptUrl" placeholder="https://script.google.com/macros/s/...">
+        <div class="hint">URL dari deploy Apps Script Google Sheets.</div>
+      </div>
+      <div class="field">
+        <label>Nama Anda</label>
+        <input type="text" id="userName" placeholder="contoh: Budi Santoso">
+        <div class="hint">Dicatat di setiap data yang Anda submit sebagai PIC.</div>
+      </div>
+      <button class="btn btn-pink" style="width:100%;justify-content:center;margin-top:.75rem" onclick="testConn()">
+        <span id="testBtn">Hubungkan &amp; Masuk</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="mainScreen" style="display:none">
+  <div class="wrap">
+    <div class="sync-bar">
+      <div class="sdot sok" id="syncDot"></div>
+      <span class="sl">Terhubung</span>
+      <span class="sep">·</span>
+      <span class="sl">Total tersimpan:</span>
+      <span class="sv" id="syncKK">—</span><span class="sl">baris KK,</span>
+      <span class="sv" id="syncRap">—</span><span class="sl">baris Raport</span>
+      <div style="margin-left:auto"><button class="btn btn-outline btn-sm" onclick="refreshStats()">↻ Refresh</button></div>
+    </div>
+    <div class="stats">
+      <div class="sc"><div class="sc-label">Total data</div><div class="sc-val vp" id="sTotal">—</div><div class="sc-sub">di Google Sheets</div></div>
+      <div class="sc"><div class="sc-label">Kartu Keluarga</div><div class="sc-val vg" id="sKK">—</div><div class="sc-sub">baris tersimpan</div></div>
+      <div class="sc"><div class="sc-label">Raport</div><div class="sc-val va" id="sRap">—</div><div class="sc-sub">baris tersimpan</div></div>
+      <div class="sc"><div class="sc-label">Antrian</div><div class="sc-val vb" id="sQ">0</div><div class="sc-sub">file siap proses</div></div>
+    </div>
+    <div class="sec-label">Upload dokumen</div>
+    <div class="dz" id="dz">
+      <input type="file" id="fi" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
+      <div style="font-size:28px;margin-bottom:6px;opacity:.6">📂</div>
+      <p class="dz-t"><strong>Klik atau drag &amp; drop</strong> file ke sini</p>
+      <p class="dz-s">PDF, JPG, PNG, WEBP — campuran KK &amp; Raport, auto-detect duplikat</p>
+    </div>
+    <div class="queue" id="queue"></div>
+    <div class="prog-wrap" id="pw">
+      <div class="prog-top"><span id="pl">Memproses...</span><span id="pp">0%</span></div>
+      <div class="prog-track"><div class="prog-fill" id="pf"></div></div>
+      <div class="prog-sub" id="ps"></div>
+    </div>
+    <div class="log" id="log"></div>
+    <div class="actions">
+      <button class="btn btn-pink" id="btnGo" disabled onclick="startProcessing()">⚡ Ekstrak &amp; Kirim ke Sheets</button>
+      <button class="btn btn-outline" onclick="clearQ()">Batal</button>
+      <span class="dup-note" id="dupNote">⚠ File duplikat dilewati otomatis</span>
+    </div>
+    <div class="result" id="result">
+      <h3>Hasil batch terakhir</h3>
+      <div class="rg">
+        <div><div class="ri-label">Batch ID</div><div class="ri-val" id="rBatch">—</div></div>
+        <div><div class="ri-label">Dikirim oleh</div><div class="ri-val" id="rUser">—</div></div>
+        <div><div class="ri-label">KK disimpan</div><div class="ri-val rok" id="rKK">—</div></div>
+        <div><div class="ri-label">Raport disimpan</div><div class="ri-val rok" id="rRap">—</div></div>
+        <div><div class="ri-label">File gagal</div><div class="ri-val" id="rFail">—</div></div>
+        <div><div class="ri-label">Status Sheets</div><div class="ri-val rok" id="rStatus">—</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LS="ant_bsw_v2";
+let cfg={worker:'',sheets:'',name:''},files=[],busy=false;
+
+function loadCfg(){try{const c=localStorage.getItem(LS);if(c)cfg=JSON.parse(c);}catch(e){}}
+function saveCfg(){localStorage.setItem(LS,JSON.stringify(cfg));}
+function logout(){if(!confirm('Ganti konfigurasi?'))return;localStorage.removeItem(LS);location.reload();}
+
+async function testConn(){
+  const w=document.getElementById('workerUrl').value.trim();
+  const s=document.getElementById('scriptUrl').value.trim();
+  const n=document.getElementById('userName').value.trim();
+  if(!w||!s||!n){alert('Mohon isi semua field.');return;}
+  document.getElementById('testBtn').innerHTML='<span class="spin">&#8635;</span> Menguji...';
+  setConn('i','Menguji koneksi...');
+  // Test worker dengan ping sederhana
+  try{
+    const r=await fetch(w,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:[{role:'user',content:'ping'}],max_tokens:5})});
+    if(!r.ok&&r.status!==400)throw new Error('Worker error '+r.status);
+    // Test sheets
+    const r2=await fetch(s,{method:'POST',body:JSON.stringify({action:'ping'})});
+    const d2=await r2.json();
+    if(d2.status!=='ok')throw new Error('Sheets error');
+    cfg={worker:w,sheets:s,name:n};saveCfg();
+    setConn('o','Terhubung!');setTimeout(showMain,500);
+  }catch(e){
+    setConn('e','Gagal: '+e.message);
+    document.getElementById('testBtn').textContent='Hubungkan & Masuk';
+  }
+}
+
+function setConn(t,m){
+  const map={i:'ci',o:'co',e:'ce'};const dm={i:'di',o:'do',e:'de'};
+  document.getElementById('connBanner').className='conn-banner '+map[t];
+  document.getElementById('connDot').className='cdot '+dm[t];
+  document.getElementById('connMsg').textContent=m;
+}
+
+function showMain(){
+  document.getElementById('setupScreen').style.display='none';
+  document.getElementById('mainScreen').style.display='block';
+  document.getElementById('navRight').style.display='flex';
+  const ini=cfg.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('navAvatar').textContent=ini;
+  document.getElementById('navName').textContent=cfg.name;
+  refreshStats();
+}
+
+async function refreshStats(){
+  try{
+    const r=await fetch(cfg.sheets,{method:'POST',body:JSON.stringify({action:'get_data'})});
+    const d=await r.json();
+    if(d.status==='ok'){
+      const kk=d.kk.length,rap=d.raport.length;
+      document.getElementById('syncKK').textContent=kk;
+      document.getElementById('syncRap').textContent=rap;
+      document.getElementById('sTotal').textContent=kk+rap;
+      document.getElementById('sKK').textContent=kk;
+      document.getElementById('sRap').textContent=rap;
+    }
+  }catch(e){document.getElementById('syncDot').className='sdot serr';}
+}
+
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');addFiles(e.dataTransfer.files);});
+document.getElementById('fi').addEventListener('change',e=>addFiles(e.target.files));
+
+async function addFiles(nf){
+  const names=[];
+  for(const f of nf){if(!files.find(x=>x.name===f.name&&x.size===f.size)){files.push({file:f,name:f.name,size:f.size,status:'pending',type:null,dup:false});names.push(f.name);}}
+  if(names.length){
+    try{const r=await fetch(cfg.sheets,{method:'POST',body:JSON.stringify({action:'check_duplicates',filenames:names})});const d=await r.json();if(d.status==='ok')d.duplicates.forEach(fn=>{const f=files.find(x=>x.name===fn);if(f){f.dup=true;f.status='dup';}});}catch(e){}
+  }
+  renderQ();
+  const n=files.filter(f=>!f.dup).length;
+  document.getElementById('sQ').textContent=n;
+  document.getElementById('btnGo').disabled=n===0||busy;
+  if(files.some(f=>f.dup))document.getElementById('dupNote').style.display='inline';
+}
+
+function renderQ(){
+  const q=document.getElementById('queue');
+  if(!files.length){q.innerHTML='';return;}
+  q.innerHTML=files.map(f=>{
+    const sz=(f.size/1024).toFixed(0)+' KB';
+    const b=f.dup?'<span class="pill pd">&#9888; sudah ada</span>'
+      :f.status==='pending'?'<span class="pill pp">menunggu</span>'
+      :f.status==='processing'?'<span class="pill ppr pulse">&#9881; memproses</span>'
+      :f.type==='KK'?'<span class="pill pk">&#10003; KK</span>'
+      :f.type==='Raport'?'<span class="pill pr">&#10003; Raport</span>'
+      :f.status==='error'?'<span class="pill pe">&#10007; gagal</span>'
+      :'<span class="pill pp">-</span>';
+    return`<div class="qi"><span class="qn">${f.name}</span><span class="qs">${sz}</span>${b}</div>`;
+  }).join('');
+}
+
+function addLog(msg,t){
+  const el=document.getElementById('log');el.style.display='block';
+  const ts=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML+=`<div><span class="lts">[${ts}]</span> <span class="l${t}">${msg}</span></div>`;
+  el.scrollTop=el.scrollHeight;
+}
+
+function setP(pct,label,sub=''){
+  document.getElementById('pw').style.display='block';
+  document.getElementById('pf').style.width=pct+'%';
+  document.getElementById('pp').textContent=pct+'%';
+  document.getElementById('pl').textContent=label;
+  document.getElementById('ps').textContent=sub;
+}
+
+async function toB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});}
+function getMT(file){const e=file.name.split('.').pop().toLowerCase();if(e==='pdf')return'application/pdf';if(e==='png')return'image/png';if(e==='webp')return'image/webp';return'image/jpeg';}
+function ij(s,k){const t=((s||'')+(k||'')).toLowerCase();if(/universitas|politeknik|s1|s2|d3/.test(t))return'Perguruan Tinggi';if(/sma|smk|aliyah|kelas 1[012]| x | xi | xii /.test(t))return'SMA/SMK';if(/smp|mts|kelas [789]|vii|viii/.test(t))return'SMP';if(/\bsd\b|ibtidaiyah|kelas [1-6]\b/.test(t))return'SD';return'Tidak diketahui';}
+
+const PROMPT=`Kamu adalah sistem ekstraksi dokumen untuk validasi beasiswa karyawan. Tentukan tipe dokumen dan ekstrak data.
+
+Kembalikan HANYA JSON murni (tanpa markdown):
+
+Jika KARTU KELUARGA — hanya anggota hubungan "Anak":
+{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"","jenis_kelamin":"","tanggal_lahir":"","pendidikan":""}]}
+
+Jika RAPORT ANAK:
+{"tipe":"Raport","nama_siswa":"","nama_sekolah":"","jenjang":"","kelas":"","semester":"","tahun_ajaran":""}
+- jenjang: SD/SMP/SMA/SMK/Perguruan Tinggi
+- semester: "1" atau "2", tahun_ajaran: "2024/2025"
+
+Jika tidak dikenali: {"tipe":"UNKNOWN","alasan":"..."}
+Isi "" jika tidak tersedia.`;
+
+async function extractDoc(fo){
+  const b64=await toB64(fo.file),m=getMT(fo.file);
+  const item=m==='application/pdf'?{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}}:{type:"image",source:{type:"base64",media_type:m,data:b64}};
+  // Kirim ke Cloudflare Worker (bukan langsung ke Anthropic)
+  const r=await fetch(cfg.worker,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1500,messages:[{role:"user",content:[item,{type:"text",text:PROMPT}]}]})});
+  if(!r.ok)throw new Error("Worker error "+r.status);
+  const d=await r.json();
+  if(d.error)throw new Error(d.error);
+  return JSON.parse(d.content.map(c=>c.text||'').join('').trim().replace(/```json|```/g,'').trim());
+}
+
+async function startProcessing(){
+  const toProc=files.filter(f=>!f.dup);
+  if(busy||!toProc.length)return;
+  busy=true;document.getElementById('btnGo').disabled=true;document.getElementById('result').style.display='none';
+  const bid='BATCH-'+Date.now().toString(36).toUpperCase();
+  const kkRows=[],rapRows=[],failed=[];
+  addLog("Batch "+bid+" — "+toProc.length+" file",'in');
+  for(let i=0;i<toProc.length;i++){
+    const f=toProc[i];f.status='processing';renderQ();
+    setP(Math.round(i/toProc.length*80),"Mengekstrak dokumen","File "+(i+1)+" dari "+toProc.length+": "+f.name);
+    addLog("Menganalisis: "+f.name,'in');
+    try{
+      const r=await extractDoc(f);
+      if(r.tipe==='KK'){
+        f.status='done';f.type='KK';
+        const anak=r.anak||[];
+        if(!anak.length)kkRows.push({sumber:f.name,no_kk:r.no_kk,kepala_keluarga:r.kepala_keluarga,nama:'(tidak ada data anak)',jenis_kelamin:'',tanggal_lahir:'',pendidikan:''});
+        else anak.forEach(a=>kkRows.push({sumber:f.name,no_kk:r.no_kk,kepala_keluarga:r.kepala_keluarga,nama:a.nama,jenis_kelamin:a.jenis_kelamin,tanggal_lahir:a.tanggal_lahir,pendidikan:a.pendidikan}));
+        addLog("&#10003; "+f.name+" &#8594; KK | "+r.kepala_keluarga,'ok');
+      }else if(r.tipe==='Raport'){
+        f.status='done';f.type='Raport';
+        if(!r.jenjang)r.jenjang=ij(r.nama_sekolah,r.kelas);
+        rapRows.push({sumber:f.name,nama_siswa:r.nama_siswa,jenjang:r.jenjang,nama_sekolah:r.nama_sekolah,kelas:r.kelas,semester:r.semester?'Semester '+r.semester:'',tahun_ajaran:r.tahun_ajaran});
+        addLog("&#10003; "+f.name+" &#8594; Raport | "+r.nama_siswa,'ok');
+      }else{f.status='error';failed.push(f.name);addLog("&#9888; "+f.name+" &#8594; tidak dikenali",'w');}
+    }catch(e){f.status='error';failed.push(f.name);addLog("&#10007; "+f.name+": "+e.message,'e');}
+    renderQ();
+  }
+  setP(88,"Mengirim ke Google Sheets","Menyimpan "+kkRows.length+" KK + "+rapRows.length+" Raport...");
+  let ok=false;
+  try{
+    const r=await fetch(cfg.sheets,{method:'POST',body:JSON.stringify({action:'submit_batch',batch_id:bid,submitted_by:cfg.name,total_files:toProc.length,kk_rows:kkRows,raport_rows:rapRows,failed_files:failed})});
+    const d=await r.json();
+    if(d.status==='ok'){ok=true;addLog("&#10003; Tersimpan ke Sheets ("+d.kk_saved+" KK, "+d.raport_saved+" Raport)",'ok');}
+    else addLog("&#10007; Gagal simpan: "+(d.message||'error'),'e');
+  }catch(e){addLog("&#10007; Gagal kirim ke Sheets: "+e.message,'e');}
+  setP(100,"Selesai!",'');
+  const res=document.getElementById('result');res.style.display='block';
+  document.getElementById('rBatch').textContent=bid;
+  document.getElementById('rUser').textContent=cfg.name;
+  document.getElementById('rKK').textContent=kkRows.length+' baris';
+  document.getElementById('rRap').textContent=rapRows.length+' baris';
+  const fe=document.getElementById('rFail');fe.textContent=failed.length?failed.length+' file':'Tidak ada';fe.className='ri-val '+(failed.length?'rw':'rok');
+  const se=document.getElementById('rStatus');se.textContent=ok?'Tersimpan':'Gagal';se.className='ri-val '+(ok?'rok':'re');
+  if(ok)refreshStats();
+  busy=false;
+}
+
+function clearQ(){
+  files=[];document.getElementById('queue').innerHTML='';document.getElementById('pw').style.display='none';
+  document.getElementById('btnGo').disabled=true;document.getElementById('dupNote').style.display='none';
+  document.getElementById('sQ').textContent='0';document.getElementById('fi').value='';
+}
+
+loadCfg();
+if(cfg.worker&&cfg.sheets&&cfg.name)showMain();
+</script>
+</body>
+</html>
