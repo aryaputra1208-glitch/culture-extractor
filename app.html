@@ -307,37 +307,30 @@ function normJ(j){
   return j.trim();
 }
 
-var EXTRACT_PROMPT = `Kamu adalah sistem ekstraksi dokumen untuk validasi beasiswa karyawan. Tugasmu membaca dan mengekstrak data dari foto atau scan dokumen meski foto miring, buram, kontras rendah, atau sebagian terpotong.
+var EXTRACT_PROMPT = `Kamu adalah sistem ekstraksi dokumen Indonesia yang sangat teliti. Baca dokumen ini dengan sangat hati-hati.
 
-LANGKAH 1 - Tentukan tipe dokumen:
-- KARTU KELUARGA: ada header KARTU KELUARGA, nomor KK, kolom NIK, nama kepala keluarga, daftar anggota dengan hubungan (Kepala Keluarga / Istri / Anak)
-- RAPORT: dokumen penilaian anak dari sekolah, bisa berupa:
-  * Raport SD/SMP/SMA/SMK: ada nama peserta didik, nama sekolah, kelas, semester, tahun pelajaran, daftar mata pelajaran
-  * Raport PAUD/TK/RA: ada nama anak, nama lembaga PAUD/TK/RA, penilaian perkembangan (BB/MB/BSH/BSB atau centang), tanggal/periode
-  * Raport Pesantren/Madrasah: ada nama santri, nama pondok/madrasah, penilaian kitab atau mata pelajaran agama
-- Jika tidak jelas, coba baca semua orientasi dokumen sebelum memutuskan UNKNOWN
+PENTING - KARTU KELUARGA:
+Struktur tabel KK Indonesia memiliki kolom header: No, Nama Lengkap, NIK, Jenis Kelamin, Tempat Lahir, Tanggal Lahir, Agama, Pendidikan, dll.
+Dan tabel kedua berisi: Status Perkawinan, Tanggal Perkawinan, Status Hubungan Dalam Keluarga, Kewarganegaraan, dll.
 
-LANGKAH 2 - Ekstrak data:
+JANGAN pernah mengambil nama kolom header seperti "JENIS KELAMIN", "NAMA LENGKAP", "NIK", "AGAMA", dll sebagai nama anggota keluarga.
+Nama anggota keluarga adalah teks NYATA di dalam sel tabel, bukan header kolomnya.
 
-Jika KARTU KELUARGA, ekstrak HANYA anggota dengan Status Hubungan = Anak:
-{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"","jenis_kelamin":"L atau P","tanggal_lahir":"","pendidikan":""}]}
-- Isi pendidikan sesuai yang tertulis di KK (Belum Tamat SD, SLTA/Sederajat, Tidak/Blm Sekolah, dll)
-- Hanya masukkan anggota hubungan = Anak
-- Jika foto miring atau buram, tetap coba baca dan isi semampu mungkin
+Status Hubungan Dalam Keluarga yang valid: KEPALA KELUARGA, ISTRI, ANAK, MENANTU, CUCU, dll.
+Hanya ambil anggota dengan status hubungan = ANAK.
 
-Jika RAPORT semua jenis:
+Format output jika KARTU KELUARGA:
+{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"nama_asli_anak","jenis_kelamin":"L atau P","tanggal_lahir":"","pendidikan":""}]}
+
+PENTING - RAPORT:
+Raport bisa berupa: SD/SMP/SMA/SMK, PAUD/TK/RA, Pesantren/Madrasah.
+Nama siswa ada di bagian header/identitas dokumen, bukan di dalam tabel nilai.
+
+Format output jika RAPORT:
 {"tipe":"Raport","nama_siswa":"","nama_sekolah":"","jenjang":"","kelas":"","semester":"","tahun_ajaran":""}
-- jenjang pilih salah satu: PAUD/TK atau SD atau SMP atau SMA atau SMK atau Perguruan Tinggi atau Pesantren/Madrasah
-- PAUD/TK/RA/Kelompok Bermain = PAUD/TK
-- SD/MI/Madrasah Ibtidaiyah = SD
-- SMP/MTs = SMP, SMA/MA = SMA, SMK = SMK
-- Universitas/Politeknik/D3/D4/S1/S2 = Perguruan Tinggi
-- semester: 1 atau 2, untuk PAUD boleh kosong
-- tahun_ajaran: format 2024/2025
-- Jika field tidak terbaca, isi dengan string kosong
+Jenjang: PAUD/TK atau SD atau SMP atau SMA atau SMK atau Perguruan Tinggi atau Pesantren/Madrasah
 
-Jika tidak bisa dikenali: {"tipe":"UNKNOWN","alasan":"jelaskan kenapa"}
-
+Jika tidak dikenali: {"tipe":"UNKNOWN","alasan":""}
 Kembalikan HANYA JSON murni tanpa markdown.`;
 
 async function callAPI(msgs, maxTok){
