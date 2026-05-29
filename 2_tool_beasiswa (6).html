@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Validasi Beasiswa — Anteraja</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#E8197C;--pink-light:#FCE4F1;--pink-dark:#B5125E;
+  --green:#16A34A;--green-bg:#DCFCE7;
+  --amber:#D97706;--amber-bg:#FEF3C7;
+  --red:#DC2626;--red-bg:#FEE2E2;
+  --blue:#2563EB;--blue-bg:#DBEAFE;
+  --bg:#F5F6F7;--white:#FFFFFF;
+  --text:#111827;--muted:#6B7280;--border:#E5E7EB;--border2:#D1D5DB;
+  --sans:'Inter',sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,.07);
+  --shm:0 4px 8px rgba(0,0,0,.07);
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;height:54px;gap:12px;position:sticky;top:0;z-index:50;box-shadow:var(--sh)}
+.ndiv{width:1px;height:18px;background:var(--border)}
+.ntitle{font-size:12px;color:var(--muted);font-weight:500}
+.wrap{max-width:900px;margin:0 auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+
+/* Steps */
+.step{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1.25rem;box-shadow:var(--sh)}
+.step-head{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--pink);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-num.done{background:var(--green)}
+.step-num.inactive{background:var(--border2);color:var(--muted)}
+.step-title{font-size:14px;font-weight:600;color:var(--text)}
+.step-sub{font-size:12px;color:var(--muted);margin-top:1px}
+
+/* Template download */
+.template-bar{display:flex;align-items:center;justify-content:space-between;background:var(--blue-bg);border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:.875rem}
+.template-bar p{font-size:12px;color:var(--blue);font-weight:500}
+.template-bar span{font-size:11px;color:var(--blue);opacity:.8}
+
+/* Upload areas */
+.upload-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.5rem}
+.dz{border:1.5px dashed var(--border2);border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--bg)}
+.dz:hover,.dz.drag{border-color:var(--pink);background:var(--pink-light)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{font-size:24px;margin-bottom:6px;opacity:.6}
+.dz-label{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.dz-sub{font-size:11px;color:var(--muted)}
+.dz.loaded{border-color:var(--green);background:var(--green-bg)}
+.dz.loaded .dz-icon{opacity:1}
+
+/* Karyawan table preview */
+.preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.75rem}
+.preview-table th{background:var(--bg);padding:7px 10px;text-align:left;font-weight:500;color:var(--muted);border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.preview-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+.preview-table tr:last-child td{border-bottom:none}
+
+/* File queue */
+.queue{display:flex;flex-direction:column;gap:4px;margin-top:.75rem;max-height:160px;overflow-y:auto}
+.qi{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:12px}
+.qn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.qs{color:var(--muted);font-size:11px;min-width:48px;text-align:right}
+.pill{display:inline-flex;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600;white-space:nowrap}
+.pp{background:#F3F4F6;color:var(--muted)}
+.ppr{background:var(--blue-bg);color:var(--blue)}
+.pk{background:var(--pink-light);color:var(--pink)}
+.pr{background:var(--green-bg);color:var(--green)}
+.pe{background:var(--red-bg);color:var(--red)}
+
+/* Progress */
+.prog-wrap{display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:.75rem}
+.prog-top{display:flex;justify-content:space-between;font-size:12px;font-weight:500;margin-bottom:6px}
+.prog-track{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;background:var(--pink);border-radius:99px;transition:width .4s ease;width:0%}
+.prog-sub{font-size:11px;color:var(--muted);margin-top:5px}
+
+/* Log */
+.log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:monospace;font-size:11px;color:var(--muted);max-height:80px;overflow-y:auto;display:none;margin-top:.75rem;line-height:1.7}
+.lok{color:var(--green)}.lin{color:var(--blue)}.lw{color:var(--amber)}.le{color:var(--red)}.lts{color:#D1D5DB}
+
+/* Actions */
+.action-bar{display:flex;gap:8px;align-items:center;margin-top:1rem}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:var(--sans);transition:all .15s}
+.btn-pink{background:var(--pink);color:#fff}.btn-pink:hover{background:var(--pink-dark)}
+.btn-pink:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-outline{background:var(--white);border:1.5px solid var(--border2);color:var(--text)}.btn-outline:hover{border-color:var(--pink);color:var(--pink)}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#15803D}
+.btn-green:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:#1D4ED8}
+
+/* Result */
+.result-section{display:none}
+.result-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+.rs{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:11px 13px;box-shadow:var(--sh)}
+.rs-label{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.rs-val{font-size:20px;font-weight:700;margin-top:3px}
+.rv-total{color:var(--blue)}.rv-valid{color:var(--green)}.rv-invalid{color:var(--red)}.rv-partial{color:var(--amber)}
+
+.result-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--white)}
+.result-table{width:100%;border-collapse:collapse;font-size:12px}
+.result-table th{background:var(--bg);padding:9px 12px;text-align:left;font-weight:500;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.result-table td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.result-table tr:last-child td{border-bottom:none}
+.result-table tr:hover td{background:#FAFAFA}
+.status-valid{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 9px;border-radius:99px;font-weight:600;background:var(--green-bg);color:var(--green)}
+.status-invalid{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 9px;border-radius:99px;font-weight:600;background:var(--red-bg);color:var(--red)}
+.status-partial{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 9px;border-radius:99px;font-weight:600;background:var(--amber-bg);color:var(--amber)}
+.notes-cell{font-size:11px;color:var(--muted);max-width:200px}
+.match-score{font-size:10px;color:var(--muted)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulse{animation:pulse 1s ease infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .7s linear infinite;display:inline-block}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <img src="data:image/png;base64,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" style="height:32px;width:auto" alt="Anteraja">
+  <div class="ndiv"></div>
+  <span class="ntitle">Validasi Beasiswa Anak Karyawan</span>
+</nav>
+
+<div class="wrap">
+
+  <!-- STEP 1: List Karyawan -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num" id="sn1">1</div>
+      <div>
+        <div class="step-title">Upload list karyawan</div>
+        <div class="step-sub">File Excel dengan nama karyawan dan jenjang yang diajukan</div>
+      </div>
+    </div>
+
+    <div class="template-bar">
+      <div>
+        <p>Download template Excel</p>
+        <span>Kolom: Nama Karyawan, Jenjang Diajukan</span>
+      </div>
+      <button class="btn btn-blue btn-sm" onclick="downloadTemplate()">⬇ Download Template</button>
+    </div>
+
+    <div class="dz" id="dzKaryawan">
+      <input type="file" id="fiKaryawan" accept=".xlsx,.xls,.csv">
+      <div class="dz-icon">📋</div>
+      <div class="dz-label">Upload list karyawan</div>
+      <div class="dz-sub">Excel atau CSV</div>
+    </div>
+
+    <div id="karyawanPreview" style="display:none">
+      <div style="font-size:11px;color:var(--muted);margin-top:.5rem" id="karyawanCount"></div>
+      <div style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:.5rem">
+        <table class="preview-table" id="karyawanTable">
+          <thead><tr><th>#</th><th>Nama Karyawan</th><th>Jenjang Diajukan</th></tr></thead>
+          <tbody id="karyawanBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Upload Dokumen -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num inactive" id="sn2">2</div>
+      <div>
+        <div class="step-title">Upload dokumen KK &amp; Raport</div>
+        <div class="step-sub">Bulk upload — campuran KK dan Raport, auto-detect</div>
+      </div>
+    </div>
+
+    <div class="dz" id="dzDocs" style="padding:2rem">
+      <input type="file" id="fiDocs" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
+      <div class="dz-icon">📂</div>
+      <div class="dz-label">Klik atau drag &amp; drop file ke sini</div>
+      <div class="dz-sub">PDF, JPG, PNG, WEBP — bisa sekaligus banyak file</div>
+    </div>
+
+    <div class="queue" id="queue"></div>
+  </div>
+
+  <!-- STEP 3: Proses -->
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num inactive" id="sn3">3</div>
+      <div>
+        <div class="step-title">Ekstrak &amp; validasi</div>
+        <div class="step-sub">Claude membaca dokumen, lalu mencocokkan dengan list karyawan</div>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-pink" id="btnProcess" disabled onclick="startProcess()">
+        ⚡ Mulai Ekstrak &amp; Validasi
+      </button>
+      <button class="btn btn-outline" onclick="resetAll()">↺ Reset</button>
+      <span id="readyNote" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+
+    <div class="prog-wrap" id="pw">
+      <div class="prog-top"><span id="pl">Memproses...</span><span id="pp">0%</span></div>
+      <div class="prog-track"><div class="prog-fill" id="pf"></div></div>
+      <div class="prog-sub" id="ps"></div>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- STEP 4: Hasil -->
+  <div class="step result-section" id="resultSection">
+    <div class="step-head">
+      <div class="step-num done">4</div>
+      <div>
+        <div class="step-title">Hasil validasi</div>
+        <div class="step-sub" id="resultSub"></div>
+      </div>
+      <div style="margin-left:auto">
+        <button class="btn btn-green btn-sm" onclick="downloadResult()">⬇ Download Excel</button>
+      </div>
+    </div>
+
+    <div class="result-stats">
+      <div class="rs"><div class="rs-label">Total karyawan</div><div class="rs-val rv-total" id="rTotal">0</div></div>
+      <div class="rs"><div class="rs-label">Valid</div><div class="rs-val rv-valid" id="rValid">0</div></div>
+      <div class="rs"><div class="rs-label">Tidak valid</div><div class="rs-val rv-invalid" id="rInvalid">0</div></div>
+      <div class="rs"><div class="rs-label">Partial</div><div class="rs-val rv-partial" id="rPartial">0</div></div>
+    </div>
+
+    <div class="result-table-wrap">
+      <table class="result-table">
+        <thead><tr>
+          <th>Nama Karyawan</th>
+          <th>Jenjang Diajukan</th>
+          <th>Nama Anak (KK)</th>
+          <th>Jenjang KK</th>
+          <th>Nama Siswa (Raport)</th>
+          <th>Jenjang Raport</th>
+          <th>Tahun Ajaran</th>
+          <th>Status</th>
+          <th>Notes</th>
+        </tr></thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const LS = "ant_bsw_cfg_v3";
+let cfg = {};
+try { cfg = JSON.parse(localStorage.getItem(LS) || '{}'); } catch(e) {}
+
+// Ambil worker URL dari config lama kalau ada
+const WORKER_URL = cfg.worker || prompt("Masukkan Cloudflare Worker URL:", "https://culture-extractor.arya-putra1208.workers.dev/");
+if (WORKER_URL) { cfg.worker = WORKER_URL; localStorage.setItem(LS, JSON.stringify(cfg)); }
+
+// ── State ─────────────────────────────────────────────────────
+let karyawanList = [];  // [{nama, jenjang}]
+let docFiles = [];      // [{file, name, size}]
+let resultData = [];    // hasil akhir
+let busy = false;
+
+// ── Template download ─────────────────────────────────────────
+function downloadTemplate() {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ["Nama Karyawan", "Jenjang Diajukan"],
+    ["Budi Santoso", "SMA"],
+    ["Dewi Rahayu", "SD"],
+    ["Ahmad Fauzi", "SMP"],
+  ]);
+  ws["!cols"] = [{wch:28},{wch:18}];
+  XLSX.utils.book_append_sheet(wb, ws, "List Karyawan");
+  XLSX.writeFile(wb, "template_list_karyawan.xlsx");
+}
+
+// ── Upload list karyawan ──────────────────────────────────────
+const dzK = document.getElementById("dzKaryawan");
+dzK.addEventListener("dragover", e => { e.preventDefault(); dzK.classList.add("drag"); });
+dzK.addEventListener("dragleave", () => dzK.classList.remove("drag"));
+dzK.addEventListener("drop", e => { e.preventDefault(); dzK.classList.remove("drag"); loadKaryawan(e.dataTransfer.files[0]); });
+document.getElementById("fiKaryawan").addEventListener("change", e => loadKaryawan(e.target.files[0]));
+
+function loadKaryawan(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, { type: "binary" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    // Skip header row
+    karyawanList = rows.slice(1)
+      .filter(r => r[0])
+      .map(r => ({ nama: String(r[0]).trim(), jenjang: String(r[1] || "").trim() }));
+    renderKaryawanPreview();
+    checkReady();
+  };
+  reader.readAsBinaryString(file);
+}
+
+function renderKaryawanPreview() {
+  const preview = document.getElementById("karyawanPreview");
+  const body = document.getElementById("karyawanBody");
+  const count = document.getElementById("karyawanCount");
+  if (!karyawanList.length) { preview.style.display = "none"; return; }
+  preview.style.display = "block";
+  count.textContent = karyawanList.length + " karyawan dimuat";
+  body.innerHTML = karyawanList.slice(0, 10).map((k, i) =>
+    `<tr><td style="color:var(--muted)">${i+1}</td><td>${k.nama}</td><td>${k.jenjang||"-"}</td></tr>`
+  ).join("") + (karyawanList.length > 10 ? `<tr><td colspan="3" style="color:var(--muted);text-align:center;font-style:italic">...dan ${karyawanList.length - 10} lainnya</td></tr>` : "");
+  document.getElementById("dzKaryawan").classList.add("loaded");
+  document.getElementById("sn1").classList.remove("inactive");
+  document.getElementById("sn2").classList.remove("inactive");
+}
+
+// ── Upload dokumen ────────────────────────────────────────────
+const dzD = document.getElementById("dzDocs");
+dzD.addEventListener("dragover", e => { e.preventDefault(); dzD.classList.add("drag"); });
+dzD.addEventListener("dragleave", () => dzD.classList.remove("drag"));
+dzD.addEventListener("drop", e => { e.preventDefault(); dzD.classList.remove("drag"); addDocs(e.dataTransfer.files); });
+document.getElementById("fiDocs").addEventListener("change", e => addDocs(e.target.files));
+
+function addDocs(newFiles) {
+  for (const f of newFiles) {
+    if (!docFiles.find(x => x.name === f.name && x.size === f.size))
+      docFiles.push({ file: f, name: f.name, size: f.size, status: "pending", type: null });
+  }
+  renderQueue();
+  checkReady();
+}
+
+function renderQueue() {
+  const q = document.getElementById("queue");
+  if (!docFiles.length) { q.innerHTML = ""; return; }
+  q.innerHTML = docFiles.map(f => {
+    const sz = (f.size / 1024).toFixed(0) + " KB";
+    const b = f.status === "pending" ? '<span class="pill pp">menunggu</span>'
+      : f.status === "processing" ? '<span class="pill ppr pulse">⚙ memproses</span>'
+      : f.type === "KK" ? '<span class="pill pk">✓ KK</span>'
+      : f.type === "Raport" ? '<span class="pill pr">✓ Raport</span>'
+      : f.status === "error" ? '<span class="pill pe">✗ gagal</span>'
+      : '<span class="pill pp">-</span>';
+    return `<div class="qi"><span class="qn">${f.name}</span><span class="qs">${sz}</span>${b}</div>`;
+  }).join("");
+}
+
+function checkReady() {
+  const toProc = docFiles.filter(f => f.status === "pending").length;
+  const ready = karyawanList.length > 0 && toProc > 0;
+  document.getElementById("btnProcess").disabled = !ready || busy;
+  document.getElementById("readyNote").textContent = ready
+    ? karyawanList.length + " karyawan · " + toProc + " dokumen siap"
+    : "";
+  if (toProc > 0) document.getElementById("sn3").classList.remove("inactive");
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function addLog(msg, t) {
+  const el = document.getElementById("log");
+  el.style.display = "block";
+  const ts = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  el.innerHTML += `<div><span class="lts">[${ts}]</span> <span class="l${t}">${msg}</span></div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function setP(pct, label, sub = "") {
+  document.getElementById("pw").style.display = "block";
+  document.getElementById("pf").style.width = pct + "%";
+  document.getElementById("pp").textContent = pct + "%";
+  document.getElementById("pl").textContent = label;
+  document.getElementById("ps").textContent = sub;
+}
+
+async function toB64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(",")[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function getMT(file) {
+  const e = file.name.split(".").pop().toLowerCase();
+  if (e === "pdf") return "application/pdf";
+  if (e === "png") return "image/png";
+  if (e === "webp") return "image/webp";
+  return "image/jpeg";
+}
+
+// ── Fuzzy matching ────────────────────────────────────────────
+function normalize(s) {
+  return (s || "").toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ").trim();
+}
+
+function similarity(a, b) {
+  a = normalize(a); b = normalize(b);
+  if (a === b) return 1;
+  if (!a || !b) return 0;
+  // Token-based matching
+  const ta = new Set(a.split(" "));
+  const tb = new Set(b.split(" "));
+  const inter = [...ta].filter(t => tb.has(t)).length;
+  const union = new Set([...ta, ...tb]).size;
+  const jaccard = inter / union;
+  // Also check if one contains the other
+  const contains = a.includes(b) || b.includes(a) ? 0.3 : 0;
+  return Math.min(1, jaccard + contains);
+}
+
+function findBestMatch(name, candidates, threshold = 0.4) {
+  let best = null, bestScore = 0;
+  for (const c of candidates) {
+    const score = similarity(name, c.key || c);
+    if (score > bestScore) { bestScore = score; best = c; }
+  }
+  return bestScore >= threshold ? { match: best, score: bestScore } : null;
+}
+
+function normalizeJenjang(j) {
+  if (!j) return "";
+  const t = j.toUpperCase();
+  if (/SD|DASAR|IBTIDAIYAH/.test(t)) return "SD";
+  if (/SMP|MENENGAH PERTAMA|MTS/.test(t)) return "SMP";
+  if (/SMA|SMK|ALIYAH|MENENGAH ATAS/.test(t)) return "SMA";
+  if (/PERGURUAN|UNIVERSITAS|POLITEKNIK|INSTITUT|S1|S2|D3|D4/.test(t)) return "Perguruan Tinggi";
+  return j;
+}
+
+// ── Ekstraksi Claude ──────────────────────────────────────────
+const PROMPT = `Kamu adalah sistem ekstraksi dokumen untuk validasi beasiswa karyawan. Tentukan tipe dokumen dan ekstrak data.
+
+Kembalikan HANYA JSON murni (tanpa markdown):
+
+Jika KARTU KELUARGA — hanya anggota hubungan "Anak":
+{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"","jenis_kelamin":"","tanggal_lahir":"","pendidikan":""}]}
+
+Jika RAPORT ANAK:
+{"tipe":"Raport","nama_siswa":"","nama_sekolah":"","jenjang":"","kelas":"","semester":"","tahun_ajaran":""}
+- jenjang: SD/SMP/SMA/SMK/Perguruan Tinggi
+- semester: "1" atau "2", tahun_ajaran: "2024/2025"
+
+Jika tidak dikenali: {"tipe":"UNKNOWN","alasan":"..."}
+Isi "" jika tidak tersedia.`;
+
+async function extractDoc(fo) {
+  const b64 = await toB64(fo.file), m = getMT(fo.file);
+  const item = m === "application/pdf"
+    ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
+    : { type: "image", source: { type: "base64", media_type: m, data: b64 } };
+  const r = await fetch(WORKER_URL, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ max_tokens: 1500, messages: [{ role: "user", content: [item, { type: "text", text: PROMPT }] }] })
+  });
+  if (!r.ok) throw new Error("Worker " + r.status);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return JSON.parse(d.content.map(c => c.text || "").join("").trim().replace(/```json|```/g, "").trim());
+}
+
+// ── Main process ──────────────────────────────────────────────
+async function startProcess() {
+  if (busy) return;
+  busy = true;
+  document.getElementById("btnProcess").disabled = true;
+  document.getElementById("resultSection").style.display = "none";
+
+  const toProc = docFiles.filter(f => f.status === "pending");
+  const kkDocs = [];   // [{kepala_keluarga, anak:[{nama,pendidikan}]}]
+  const raportDocs = []; // [{nama_siswa, jenjang, tahun_ajaran}]
+
+  // ── FASE 1: Ekstrak semua dokumen ──
+  addLog("Fase 1: Ekstrak " + toProc.length + " dokumen...", "in");
+  for (let i = 0; i < toProc.length; i++) {
+    const f = toProc[i];
+    f.status = "processing"; renderQueue();
+    setP(Math.round(i / toProc.length * 60), "Mengekstrak dokumen", (i+1) + "/" + toProc.length + ": " + f.name);
+    addLog("Membaca: " + f.name, "in");
+    try {
+      const r = await extractDoc(f);
+      if (r.tipe === "KK") {
+        f.status = "done"; f.type = "KK";
+        kkDocs.push({ kepala_keluarga: r.kepala_keluarga, anak: r.anak || [], sumber: f.name });
+        addLog("✓ KK: " + r.kepala_keluarga + " (" + (r.anak||[]).length + " anak)", "ok");
+      } else if (r.tipe === "Raport") {
+        f.status = "done"; f.type = "Raport";
+        raportDocs.push({ nama_siswa: r.nama_siswa, jenjang: normalizeJenjang(r.jenjang), tahun_ajaran: r.tahun_ajaran, kelas: r.kelas, sumber: f.name });
+        addLog("✓ Raport: " + r.nama_siswa + " | " + r.jenjang, "ok");
+      } else {
+        f.status = "error";
+        addLog("⚠ " + f.name + ": tidak dikenali", "w");
+      }
+    } catch(e) {
+      f.status = "error";
+      addLog("✗ " + f.name + ": " + e.message, "e");
+    }
+    renderQueue();
+  }
+
+  // ── FASE 2: Matching ──
+  addLog("Fase 2: Mencocokkan data " + karyawanList.length + " karyawan...", "in");
+  setP(65, "Mencocokkan data karyawan...", "");
+  resultData = [];
+
+  for (const kar of karyawanList) {
+    const jenjangDiajukan = normalizeJenjang(kar.jenjang);
+    let row = {
+      nama_karyawan: kar.nama,
+      jenjang_diajukan: kar.jenjang,
+      nama_anak_kk: "",
+      jenjang_kk: "",
+      nama_siswa_raport: "",
+      jenjang_raport: "",
+      tahun_ajaran: "",
+      status: "",
+      notes: []
+    };
+
+    // Match karyawan → KK (kepala keluarga)
+    const kkCandidates = kkDocs.map(k => ({ key: k.kepala_keluarga, data: k }));
+    const kkMatch = findBestMatch(kar.nama, kkCandidates, 0.35);
+
+    if (!kkMatch) {
+      row.status = "INVALID";
+      row.notes.push("KK tidak ditemukan untuk karyawan ini");
+    } else {
+      const kk = kkMatch.match.data;
+      const anak = kk.anak || [];
+
+      if (!anak.length) {
+        row.status = "INVALID";
+        row.notes.push("Tidak ada data anak di KK");
+      } else {
+        // Ambil semua anak, cari yang jenjangnya cocok
+        const anakJenjangCocok = anak.find(a => normalizeJenjang(a.pendidikan) === jenjangDiajukan);
+        const anakDipilih = anakJenjangCocok || anak[0];
+
+        row.nama_anak_kk = anak.map(a => a.nama).join(", ");
+        row.jenjang_kk = anak.map(a => a.pendidikan || "-").join(", ");
+
+        // Jika ada anak, cari Raport yang cocok
+        const raportCandidates = raportDocs.map(r => ({ key: r.nama_siswa, data: r }));
+
+        // Coba match tiap anak ke raport
+        let raportMatch = null;
+        for (const a of anak) {
+          const m = findBestMatch(a.nama, raportCandidates, 0.35);
+          if (m) { raportMatch = m; break; }
+        }
+
+        if (!raportMatch) {
+          row.status = "PARTIAL";
+          row.notes.push("KK ditemukan tapi Raport tidak ditemukan");
+        } else {
+          const raport = raportMatch.match.data;
+          row.nama_siswa_raport = raport.nama_siswa;
+          row.jenjang_raport = raport.jenjang;
+          row.tahun_ajaran = raport.tahun_ajaran;
+
+          // Validasi jenjang
+          const jenjangKKok = normalizeJenjang(anakDipilih.pendidikan) === jenjangDiajukan;
+          const jenjangRaportOk = raport.jenjang === jenjangDiajukan;
+
+          if (jenjangKKok && jenjangRaportOk) {
+            row.status = "VALID";
+          } else {
+            row.status = "PARTIAL";
+            if (!jenjangKKok) row.notes.push("Jenjang di KK (" + (anakDipilih.pendidikan||"-") + ") tidak sesuai pengajuan (" + kar.jenjang + ")");
+            if (!jenjangRaportOk) row.notes.push("Jenjang di Raport (" + raport.jenjang + ") tidak sesuai pengajuan (" + kar.jenjang + ")");
+          }
+        }
+      }
+    }
+
+    row.notes = row.notes.join("; ") || "-";
+    resultData.push(row);
+  }
+
+  setP(100, "Selesai!");
+  addLog("Selesai! " + resultData.filter(r=>r.status==="VALID").length + " valid, " + resultData.filter(r=>r.status==="INVALID").length + " invalid, " + resultData.filter(r=>r.status==="PARTIAL").length + " partial", "ok");
+  renderResult();
+  busy = false;
+}
+
+// ── Render hasil ──────────────────────────────────────────────
+function renderResult() {
+  const valid = resultData.filter(r => r.status === "VALID").length;
+  const invalid = resultData.filter(r => r.status === "INVALID").length;
+  const partial = resultData.filter(r => r.status === "PARTIAL").length;
+
+  document.getElementById("rTotal").textContent = resultData.length;
+  document.getElementById("rValid").textContent = valid;
+  document.getElementById("rInvalid").textContent = invalid;
+  document.getElementById("rPartial").textContent = partial;
+  document.getElementById("resultSub").textContent = valid + " valid · " + partial + " partial · " + invalid + " tidak valid";
+
+  const body = document.getElementById("resultBody");
+  body.innerHTML = resultData.map(r => {
+    const badge = r.status === "VALID"
+      ? '<span class="status-valid">✓ Valid</span>'
+      : r.status === "PARTIAL"
+      ? '<span class="status-partial">⚠ Partial</span>'
+      : '<span class="status-invalid">✗ Invalid</span>';
+    return `<tr>
+      <td style="font-weight:500">${r.nama_karyawan}</td>
+      <td>${r.jenjang_diajukan||"-"}</td>
+      <td>${r.nama_anak_kk||"-"}</td>
+      <td>${r.jenjang_kk||"-"}</td>
+      <td>${r.nama_siswa_raport||"-"}</td>
+      <td>${r.jenjang_raport||"-"}</td>
+      <td>${r.tahun_ajaran||"-"}</td>
+      <td>${badge}</td>
+      <td class="notes-cell">${r.notes}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("resultSection").style.display = "block";
+  document.getElementById("resultSection").scrollIntoView({ behavior: "smooth" });
+}
+
+// ── Download Excel ────────────────────────────────────────────
+function downloadResult() {
+  const wb = XLSX.utils.book_new();
+  const header = ["Nama Karyawan", "Jenjang Diajukan", "Nama Anak (KK)", "Jenjang KK", "Nama Siswa (Raport)", "Jenjang Raport", "Tahun Ajaran Raport", "Status", "Notes"];
+  const rows = [header, ...resultData.map(r => [
+    r.nama_karyawan, r.jenjang_diajukan, r.nama_anak_kk, r.jenjang_kk,
+    r.nama_siswa_raport, r.jenjang_raport, r.tahun_ajaran, r.status, r.notes
+  ])];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [24,16,28,16,28,16,14,10,40].map(w => ({ wch: w }));
+  // Warna status (basic)
+  XLSX.utils.book_append_sheet(wb, ws, "Hasil Validasi");
+  XLSX.writeFile(wb, "validasi_beasiswa_" + new Date().toISOString().slice(0,10) + ".xlsx");
+}
+
+// ── Reset ─────────────────────────────────────────────────────
+function resetAll() {
+  karyawanList = []; docFiles = []; resultData = [];
+  document.getElementById("karyawanPreview").style.display = "none";
+  document.getElementById("queue").innerHTML = "";
+  document.getElementById("pw").style.display = "none";
+  document.getElementById("log").style.display = "none";
+  document.getElementById("log").innerHTML = "";
+  document.getElementById("resultSection").style.display = "none";
+  document.getElementById("dzKaryawan").classList.remove("loaded");
+  document.getElementById("fiKaryawan").value = "";
+  document.getElementById("fiDocs").value = "";
+  document.getElementById("sn1").className = "step-num";
+  document.getElementById("sn2").className = "step-num inactive";
+  document.getElementById("sn3").className = "step-num inactive";
+  checkReady();
+}
+</script>
+</body>
+</html>
