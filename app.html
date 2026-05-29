@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Validasi Beasiswa - Anteraja</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#E8197C;--pink-light:#FCE4F1;--pink-dark:#B5125E;
+  --green:#16A34A;--green-bg:#DCFCE7;
+  --amber:#D97706;--amber-bg:#FEF3C7;
+  --red:#DC2626;--red-bg:#FEE2E2;
+  --blue:#2563EB;--blue-bg:#DBEAFE;
+  --bg:#F5F6F7;--white:#FFFFFF;
+  --text:#111827;--muted:#6B7280;--border:#E5E7EB;--border2:#D1D5DB;
+  --sans:'Inter',sans-serif;
+  --sh:0 1px 3px rgba(0,0,0,.07);
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.nav{background:var(--white);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;height:54px;gap:12px;position:sticky;top:0;z-index:50;box-shadow:var(--sh)}
+.ndiv{width:1px;height:18px;background:var(--border)}
+.ntitle{font-size:12px;color:var(--muted);font-weight:500}
+.wrap{max-width:920px;margin:0 auto;padding:1.5rem;display:flex;flex-direction:column;gap:1rem}
+.step{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1.25rem;box-shadow:var(--sh)}
+.step-head{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--pink);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-num.done{background:var(--green)}.step-num.inactive{background:var(--border2);color:var(--muted)}
+.step-title{font-size:14px;font-weight:600}.step-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.tbar{display:flex;align-items:center;justify-content:space-between;background:var(--blue-bg);border:1px solid #BFDBFE;border-radius:8px;padding:10px 14px;margin-bottom:.875rem}
+.tbar p{font-size:12px;color:var(--blue);font-weight:500}.tbar span{font-size:11px;color:var(--blue);opacity:.8}
+.dz{border:1.5px dashed var(--border2);border-radius:10px;padding:1.5rem;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:var(--bg)}
+.dz:hover,.dz.drag{border-color:var(--pink);background:var(--pink-light)}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz-icon{font-size:24px;margin-bottom:6px;opacity:.6}.dz-lbl{font-size:12px;font-weight:600;margin-bottom:2px}.dz-sub{font-size:11px;color:var(--muted)}
+.dz.loaded{border-color:var(--green);background:var(--green-bg)}
+.pw{max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-top:.75rem}
+.ptbl{width:100%;border-collapse:collapse;font-size:12px}
+.ptbl th{background:var(--bg);padding:7px 10px;text-align:left;font-weight:500;color:var(--muted);border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase}
+.ptbl td{padding:7px 10px;border-bottom:1px solid var(--border)}
+.ptbl tr:last-child td{border-bottom:none}
+.queue{display:flex;flex-direction:column;gap:4px;margin-top:.75rem;max-height:160px;overflow-y:auto}
+.qi{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:12px}
+.qn{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.qs{color:var(--muted);font-size:11px;min-width:48px;text-align:right}
+.pill{display:inline-flex;font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600;white-space:nowrap}
+.pp{background:#F3F4F6;color:var(--muted)}.ppr{background:var(--blue-bg);color:var(--blue)}
+.pk{background:var(--pink-light);color:var(--pink)}.pr{background:var(--green-bg);color:var(--green)}.pe{background:var(--red-bg);color:var(--red)}
+.pgwrap{display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:.75rem}
+.pgtop{display:flex;justify-content:space-between;font-size:12px;font-weight:500;margin-bottom:6px}
+.pgtrack{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.pgfill{height:100%;background:var(--pink);border-radius:99px;transition:width .4s ease;width:0%}
+.pgsub{font-size:11px;color:var(--muted);margin-top:5px}
+.log{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:monospace;font-size:11px;color:var(--muted);max-height:100px;overflow-y:auto;display:none;margin-top:.75rem;line-height:1.7}
+.lok{color:var(--green)}.lin{color:var(--blue)}.lw{color:var(--amber)}.le{color:var(--red)}.lts{color:#D1D5DB}
+.abar{display:flex;gap:8px;align-items:center;margin-top:1rem}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:var(--sans);transition:all .15s}
+.btn-pink{background:var(--pink);color:#fff}.btn-pink:hover{background:var(--pink-dark)}
+.btn-pink:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-ol{background:var(--white);border:1.5px solid var(--border2);color:var(--text)}.btn-ol:hover{border-color:var(--pink);color:var(--pink)}
+.btn-gr{background:var(--green);color:#fff}.btn-gr:hover{background:#15803D}
+.btn-bl{background:var(--blue);color:#fff}.btn-bl:hover{background:#1D4ED8}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+.rstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+.rs{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:11px 13px}
+.rsl{font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.rsv{font-size:20px;font-weight:700;margin-top:3px}
+.rvt{color:var(--blue)}.rvv{color:var(--green)}.rvi{color:var(--red)}.rvp{color:var(--amber)}
+.rtwrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--white)}
+.rtbl{width:100%;border-collapse:collapse;font-size:12px}
+.rtbl th{background:var(--bg);padding:9px 12px;text-align:left;font-weight:500;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap;font-size:11px;text-transform:uppercase}
+.rtbl td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.rtbl tr:last-child td{border-bottom:none}
+.rtbl tr:hover td{background:#FAFAFA}
+.sv{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 9px;border-radius:99px;font-weight:600}
+.svv{background:var(--green-bg);color:var(--green)}.svi{background:var(--red-bg);color:var(--red)}.svp{background:var(--amber-bg);color:var(--amber)}
+.nc{font-size:11px;color:var(--muted);max-width:220px;line-height:1.5}
+.sbar{display:flex;align-items:center;gap:8px;background:var(--green-bg);border:1px solid #86EFAC;border-radius:8px;padding:8px 12px;margin-top:.75rem;font-size:12px}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pulse{animation:pulse 1s ease infinite}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <img src="data:image/png;base64,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" style="height:32px;width:auto" alt="Anteraja">
+  <div class="ndiv"></div>
+  <span class="ntitle">Validasi Beasiswa Anak Karyawan</span>
+</nav>
+<div class="wrap">
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num" id="sn1">1</div>
+      <div><div class="step-title">Upload list karyawan</div><div class="step-sub">Excel dengan nama karyawan dan jenjang yang diajukan</div></div>
+    </div>
+    <div class="tbar">
+      <div><p>Download template Excel</p><span>Kolom: Nama Karyawan, Jenjang Diajukan</span></div>
+      <button class="btn btn-bl btn-sm" onclick="dlTemplate()">&#11015; Download Template</button>
+    </div>
+    <div class="dz" id="dzK">
+      <input type="file" id="fiK" accept=".xlsx,.xls,.csv">
+      <div class="dz-icon">&#128203;</div>
+      <div class="dz-lbl">Upload list karyawan</div>
+      <div class="dz-sub">Excel atau CSV &mdash; kolom: Nama Karyawan, Jenjang Diajukan</div>
+    </div>
+    <div id="kPrev" style="display:none">
+      <div style="font-size:11px;color:var(--muted);margin-top:.5rem" id="kCnt"></div>
+      <div class="pw"><table class="ptbl"><thead><tr><th>#</th><th>Nama Karyawan</th><th>Jenjang Diajukan</th></tr></thead><tbody id="kBody"></tbody></table></div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num inactive" id="sn2">2</div>
+      <div><div class="step-title">Upload dokumen KK &amp; Raport</div><div class="step-sub">Bulk upload &mdash; campuran KK dan Raport, auto-detect semua format</div></div>
+    </div>
+    <div class="dz" id="dzD" style="padding:2rem">
+      <input type="file" id="fiD" multiple accept=".pdf,.jpg,.jpeg,.png,.webp">
+      <div class="dz-icon">&#128194;</div>
+      <div class="dz-lbl">Klik atau drag &amp; drop file ke sini</div>
+      <div class="dz-sub">PDF, JPG, PNG, WEBP &mdash; campuran KK &amp; Raport semua jenjang termasuk PAUD/TK</div>
+    </div>
+    <div class="queue" id="queue"></div>
+  </div>
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num inactive" id="sn3">3</div>
+      <div><div class="step-title">Ekstrak &amp; validasi</div><div class="step-sub">Claude membaca dokumen, mencocokkan nama dengan AI, lalu memvalidasi jenjang</div></div>
+    </div>
+    <div class="abar">
+      <button class="btn btn-pink" id="btnGo" disabled onclick="startProcess()">&#9889; Mulai Ekstrak &amp; Validasi</button>
+      <button class="btn btn-ol" onclick="resetAll()">&#8635; Reset</button>
+      <span id="rdyNote" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="pgwrap" id="pgwrap">
+      <div class="pgtop"><span id="pgl">Memproses...</span><span id="pgp">0%</span></div>
+      <div class="pgtrack"><div class="pgfill" id="pgf"></div></div>
+      <div class="pgsub" id="pgs"></div>
+    </div>
+    <div class="log" id="log"></div>
+  </div>
+  <div class="step" id="resSec" style="display:none">
+    <div class="step-head">
+      <div class="step-num done">4</div>
+      <div><div class="step-title">Hasil validasi</div><div class="step-sub" id="resSub"></div></div>
+      <div style="margin-left:auto"><button class="btn btn-gr btn-sm" onclick="dlResult()">&#11015; Download Excel</button></div>
+    </div>
+    <div id="sbar" class="sbar" style="display:none">
+      <div class="sdot"></div>
+      <span style="color:var(--green);font-weight:500;font-size:12px" id="sbMsg"></span>
+    </div>
+    <div class="rstats">
+      <div class="rs"><div class="rsl">Total</div><div class="rsv rvt" id="rT">0</div></div>
+      <div class="rs"><div class="rsl">Valid</div><div class="rsv rvv" id="rV">0</div></div>
+      <div class="rs"><div class="rsl">Tidak valid</div><div class="rsv rvi" id="rI">0</div></div>
+      <div class="rs"><div class="rsl">Partial</div><div class="rsv rvp" id="rP">0</div></div>
+    </div>
+    <div class="rtwrap">
+      <table class="rtbl">
+        <thead><tr>
+          <th>Nama Karyawan</th><th>Jenjang Diajukan</th>
+          <th>Nama Anak (KK)</th><th>Jenjang KK</th>
+          <th>Nama Siswa (Raport)</th><th>Jenjang Raport</th>
+          <th>Tahun Ajaran</th><th>Status</th><th>Notes</th>
+        </tr></thead>
+        <tbody id="resBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+var LS="ant_bsw_v4";
+var cfg={};
+try{cfg=JSON.parse(localStorage.getItem(LS)||"{}")}catch(e){}
+var WORKER=cfg.worker||"";
+var SHEETS=cfg.sheets||"";
+if(!WORKER){WORKER=prompt("Cloudflare Worker URL:","https://culture-extractor.arya-putra1208.workers.dev/")||"";cfg.worker=WORKER;}
+if(!SHEETS){SHEETS=prompt("Google Apps Script URL:","");cfg.sheets=SHEETS;}
+localStorage.setItem(LS,JSON.stringify(cfg));
+
+var kList=[],docs=[],results=[],busy=false;
+
+function dlTemplate(){
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet([["Nama Karyawan","Jenjang Diajukan"],["Andrian","SMP"],["Budi Santoso","SMA"],["Dwi Kurnianto","PAUD/TK"],["Arya Agum Gumelar","SD"]]);
+  ws["!cols"]=[{wch:28},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,"List Karyawan");
+  XLSX.writeFile(wb,"template_list_karyawan.xlsx");
+}
+
+var dzK=document.getElementById("dzK");
+dzK.addEventListener("dragover",function(e){e.preventDefault();dzK.classList.add("drag");});
+dzK.addEventListener("dragleave",function(){dzK.classList.remove("drag");});
+dzK.addEventListener("drop",function(e){e.preventDefault();dzK.classList.remove("drag");loadK(e.dataTransfer.files[0]);});
+document.getElementById("fiK").addEventListener("change",function(e){loadK(e.target.files[0]);});
+
+function loadK(file){
+  if(!file)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    var wb=XLSX.read(e.target.result,{type:"binary"});
+    var ws=wb.Sheets[wb.SheetNames[0]];
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1});
+    kList=rows.slice(1).filter(function(r){return r[0];}).map(function(r){return {nama:String(r[0]).trim(),jenjang:String(r[1]||"").trim()};});
+    renderKPrev();checkReady();
+  };
+  r.readAsBinaryString(file);
+}
+
+function renderKPrev(){
+  var prev=document.getElementById("kPrev");
+  if(!kList.length){prev.style.display="none";return;}
+  prev.style.display="block";
+  document.getElementById("kCnt").textContent=kList.length+" karyawan dimuat";
+  var html=kList.slice(0,10).map(function(k,i){return "<tr><td style='color:var(--muted)'>"+(i+1)+"</td><td>"+k.nama+"</td><td>"+(k.jenjang||"-")+"</td></tr>";}).join("");
+  if(kList.length>10)html+="<tr><td colspan='3' style='color:var(--muted);text-align:center;font-style:italic'>...+"+(kList.length-10)+" lainnya</td></tr>";
+  document.getElementById("kBody").innerHTML=html;
+  dzK.classList.add("loaded");
+  document.getElementById("sn1").classList.remove("inactive");
+  document.getElementById("sn2").classList.remove("inactive");
+}
+
+var dzD=document.getElementById("dzD");
+dzD.addEventListener("dragover",function(e){e.preventDefault();dzD.classList.add("drag");});
+dzD.addEventListener("dragleave",function(){dzD.classList.remove("drag");});
+dzD.addEventListener("drop",function(e){e.preventDefault();dzD.classList.remove("drag");addDocs(e.dataTransfer.files);});
+document.getElementById("fiD").addEventListener("change",function(e){addDocs(e.target.files);});
+
+function addDocs(nf){
+  for(var i=0;i<nf.length;i++){
+    var f=nf[i];
+    if(!docs.find(function(x){return x.name===f.name&&x.size===f.size;}))
+      docs.push({file:f,name:f.name,size:f.size,status:"pending",type:null});
+  }
+  renderQ();checkReady();
+}
+
+function renderQ(){
+  var q=document.getElementById("queue");
+  if(!docs.length){q.innerHTML="";return;}
+  q.innerHTML=docs.map(function(f){
+    var sz=(f.size/1024).toFixed(0)+" KB";
+    var b=f.status==="pending"?"<span class='pill pp'>menunggu</span>"
+      :f.status==="processing"?"<span class='pill ppr pulse'>&#9881; memproses</span>"
+      :f.type==="KK"?"<span class='pill pk'>&#10003; KK</span>"
+      :f.type==="Raport"?"<span class='pill pr'>&#10003; Raport</span>"
+      :f.status==="error"?"<span class='pill pe'>&#10007; gagal</span>"
+      :"<span class='pill pp'>-</span>";
+    return "<div class='qi'><span class='qn'>"+f.name+"</span><span class='qs'>"+sz+"</span>"+b+"</div>";
+  }).join("");
+}
+
+function checkReady(){
+  var n=docs.filter(function(f){return f.status==="pending";}).length;
+  var ok=kList.length>0&&n>0;
+  document.getElementById("btnGo").disabled=!ok||busy;
+  document.getElementById("rdyNote").textContent=ok?kList.length+" karyawan, "+n+" dokumen siap":"";
+  if(n>0)document.getElementById("sn3").classList.remove("inactive");
+}
+
+function addLog(msg,t){
+  var el=document.getElementById("log");el.style.display="block";
+  var ts=new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  el.innerHTML+="<div><span class='lts'>["+ts+"]</span> <span class='l"+t+"'>"+msg+"</span></div>";
+  el.scrollTop=el.scrollHeight;
+}
+
+function setP(pct,lbl,sub){
+  document.getElementById("pgwrap").style.display="block";
+  document.getElementById("pgf").style.width=pct+"%";
+  document.getElementById("pgp").textContent=pct+"%";
+  document.getElementById("pgl").textContent=lbl;
+  document.getElementById("pgs").textContent=sub||"";
+}
+
+function toB64(file){
+  return new Promise(function(res,rej){
+    var r=new FileReader();
+    r.onload=function(){res(r.result.split(",")[1]);};
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function getMT(file){
+  var e=file.name.split(".").pop().toLowerCase();
+  if(e==="pdf")return"application/pdf";
+  if(e==="png")return"image/png";
+  if(e==="webp")return"image/webp";
+  return"image/jpeg";
+}
+
+function normJ(j){
+  if(!j)return"";
+  var t=j.toUpperCase();
+  if(t.indexOf("PAUD")>=0||t.indexOf("TK")>=0||t.indexOf("/TK")>=0||t.indexOf("RA")>=0||t.indexOf("TAMAN KANAK")>=0||t.indexOf("KELOMPOK")>=0)return"PAUD/TK";
+  if(t.indexOf("PESANTREN")>=0||t.indexOf("DINIYAH")>=0)return"Pesantren/Madrasah";
+  if(t.indexOf("PERGURUAN")>=0||t.indexOf("UNIVERSITAS")>=0||t.indexOf("POLITEKNIK")>=0||t.indexOf("S1")>=0||t.indexOf("S2")>=0||t.indexOf("D3")>=0||t.indexOf("D4")>=0)return"Perguruan Tinggi";
+  if(t.indexOf("SMK")>=0)return"SMK";
+  if(t.indexOf("SMA")>=0||t.indexOf("ALIYAH")>=0)return"SMA";
+  if(t.indexOf("SMP")>=0||t.indexOf("MTS")>=0)return"SMP";
+  if(t.indexOf("SD")>=0||t.indexOf("IBTIDAIYAH")>=0)return"SD";
+  return j.trim();
+}
+
+var EXTRACT_PROMPT = `Kamu adalah sistem ekstraksi dokumen untuk validasi beasiswa karyawan. Tugasmu membaca dan mengekstrak data dari foto atau scan dokumen meski foto miring, buram, kontras rendah, atau sebagian terpotong.
+
+LANGKAH 1 - Tentukan tipe dokumen:
+- KARTU KELUARGA: ada header KARTU KELUARGA, nomor KK, kolom NIK, nama kepala keluarga, daftar anggota dengan hubungan (Kepala Keluarga / Istri / Anak)
+- RAPORT: dokumen penilaian anak dari sekolah, bisa berupa:
+  * Raport SD/SMP/SMA/SMK: ada nama peserta didik, nama sekolah, kelas, semester, tahun pelajaran, daftar mata pelajaran
+  * Raport PAUD/TK/RA: ada nama anak, nama lembaga PAUD/TK/RA, penilaian perkembangan (BB/MB/BSH/BSB atau centang), tanggal/periode
+  * Raport Pesantren/Madrasah: ada nama santri, nama pondok/madrasah, penilaian kitab atau mata pelajaran agama
+- Jika tidak jelas, coba baca semua orientasi dokumen sebelum memutuskan UNKNOWN
+
+LANGKAH 2 - Ekstrak data:
+
+Jika KARTU KELUARGA, ekstrak HANYA anggota dengan Status Hubungan = Anak:
+{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"","jenis_kelamin":"L atau P","tanggal_lahir":"","pendidikan":""}]}
+- Isi pendidikan sesuai yang tertulis di KK (Belum Tamat SD, SLTA/Sederajat, Tidak/Blm Sekolah, dll)
+- Hanya masukkan anggota hubungan = Anak
+- Jika foto miring atau buram, tetap coba baca dan isi semampu mungkin
+
+Jika RAPORT semua jenis:
+{"tipe":"Raport","nama_siswa":"","nama_sekolah":"","jenjang":"","kelas":"","semester":"","tahun_ajaran":""}
+- jenjang pilih salah satu: PAUD/TK atau SD atau SMP atau SMA atau SMK atau Perguruan Tinggi atau Pesantren/Madrasah
+- PAUD/TK/RA/Kelompok Bermain = PAUD/TK
+- SD/MI/Madrasah Ibtidaiyah = SD
+- SMP/MTs = SMP, SMA/MA = SMA, SMK = SMK
+- Universitas/Politeknik/D3/D4/S1/S2 = Perguruan Tinggi
+- semester: 1 atau 2, untuk PAUD boleh kosong
+- tahun_ajaran: format 2024/2025
+- Jika field tidak terbaca, isi dengan string kosong
+
+Jika tidak bisa dikenali: {"tipe":"UNKNOWN","alasan":"jelaskan kenapa"}
+
+Kembalikan HANYA JSON murni tanpa markdown.`;
+
+async function callAPI(msgs, maxTok){
+  var r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({max_tokens:maxTok||1500,messages:msgs})});
+  if(!r.ok)throw new Error("Worker "+r.status);
+  var d=await r.json();
+  if(d.error)throw new Error(d.error);
+  return d.content.map(function(c){return c.text||"";}).join("").trim();
+}
+
+async function extractDoc(fo){
+  var b64=await toB64(fo.file),m=getMT(fo.file);
+  var item=m==="application/pdf"
+    ?{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}}
+    :{type:"image",source:{type:"base64",media_type:m,data:b64}};
+  var text=await callAPI([{role:"user",content:[item,{type:"text",text:EXTRACT_PROMPT}]}],1500);
+  var clean=text.replace(/\x60{3}json|\x60{3}/g,"").trim();return JSON.parse(clean);
+}
+
+async function matchKaryawan(nama, kkDocs, rapDocs){
+  var kkLines=kkDocs.map(function(k,i){return i+". "+k.kepala_keluarga+" (anak: "+k.anak.map(function(a){return a.nama;}).join(", ")+")"}).join("\n");
+  var rapLines=rapDocs.map(function(r,i){return i+". "+r.nama_siswa+" | "+r.jenjang+" | "+r.tahun_ajaran;}).join("\n");
+
+  var jsnFmt='{"kk_index":null_atau_angka,"raport_index":null_atau_angka,"alasan_kk":"","alasan_raport":""}';
+  var prompt="Cocokkan nama karyawan dengan KK dan Raport. Perhatikan kemungkinan OCR error.\n\nNama karyawan: "+nama+"\n\nKK: "+(kkLines||"tidak ada")+"\n\nRaport: "+(rapLines||"tidak ada")+"\n\nReturn JSON only: "+jsnFmt;
+  var text=await callAPI([{role:"user",content:prompt}],300);
+  var clean=text.replace(/\x60{3}json|\x60{3}/g,"").trim();return JSON.parse(clean);
+}
+
+async function startProcess(){
+  if(busy)return;
+  busy=true;
+  document.getElementById("btnGo").disabled=true;
+  document.getElementById("resSec").style.display="none";
+
+  var toProc=docs.filter(function(f){return f.status==="pending";});
+  var kkDocs=[],rapDocs=[],kkRows=[],rapRows=[];
+
+  // FASE 1: Ekstrak
+  addLog("Fase 1: Ekstrak "+toProc.length+" dokumen...","in");
+  for(var i=0;i<toProc.length;i++){
+    var f=toProc[i];f.status="processing";renderQ();
+    setP(Math.round(i/toProc.length*50),"Mengekstrak dokumen",(i+1)+"/"+toProc.length+": "+f.name);
+    addLog("Membaca: "+f.name,"in");
+    try{
+      var r=await extractDoc(f);
+      if(r.tipe==="KK"){
+        f.status="done";f.type="KK";
+        var anak=r.anak||[];
+        kkDocs.push({kepala_keluarga:r.kepala_keluarga,anak:anak,no_kk:r.no_kk,sumber:f.name});
+        anak.forEach(function(a){
+          kkRows.push({sumber:f.name,no_kk:r.no_kk,kepala_keluarga:r.kepala_keluarga,nama:a.nama,jenis_kelamin:a.jenis_kelamin,tanggal_lahir:a.tanggal_lahir,pendidikan:a.pendidikan});
+        });
+        if(!anak.length)kkRows.push({sumber:f.name,no_kk:r.no_kk,kepala_keluarga:r.kepala_keluarga,nama:"",jenis_kelamin:"",tanggal_lahir:"",pendidikan:""});
+        addLog("&#10003; KK: "+r.kepala_keluarga+" ("+anak.length+" anak)","ok");
+      }else if(r.tipe==="Raport"){
+        f.status="done";f.type="Raport";
+        var jn=normJ(r.jenjang);
+        rapDocs.push({nama_siswa:r.nama_siswa,jenjang:jn,tahun_ajaran:r.tahun_ajaran,kelas:r.kelas,nama_sekolah:r.nama_sekolah,semester:r.semester,sumber:f.name});
+        rapRows.push({sumber:f.name,nama_siswa:r.nama_siswa,jenjang:jn,nama_sekolah:r.nama_sekolah,kelas:r.kelas,semester:r.semester?"Semester "+r.semester:"",tahun_ajaran:r.tahun_ajaran});
+        addLog("&#10003; Raport: "+r.nama_siswa+" | "+jn,"ok");
+      }else{
+        f.status="error";
+        addLog("&#9888; "+f.name+": "+(r.alasan||"tidak dikenali"),"w");
+      }
+    }catch(err){
+      f.status="error";
+      addLog("&#10007; "+f.name+": "+err.message,"e");
+    }
+    renderQ();
+  }
+
+  // FASE 2: AI Matching
+  addLog("Fase 2: AI matching "+kList.length+" karyawan...","in");
+  results=[];
+
+  for(var j=0;j<kList.length;j++){
+    var kar=kList[j];
+    setP(50+Math.round(j/kList.length*35),"AI matching",(j+1)+"/"+kList.length+": "+kar.nama);
+    addLog("Mencocokkan: "+kar.nama,"in");
+    var row={
+      nama_karyawan:kar.nama,jenjang_diajukan:kar.jenjang,
+      nama_anak_kk:"",jenjang_kk:"",
+      nama_siswa_raport:"",jenjang_raport:"",tahun_ajaran:"",
+      status:"",notes:[]
+    };
+    try{
+      var m=await matchKaryawan(kar.nama,kkDocs,rapDocs);
+      var jDiaj=normJ(kar.jenjang);
+      if(m.kk_index===null||m.kk_index===undefined){
+        row.status="INVALID";
+        row.notes.push("KK tidak ditemukan: "+m.alasan_kk);
+      }else{
+        var kk=kkDocs[m.kk_index];
+        var ak=kk.anak||[];
+        row.nama_anak_kk=ak.map(function(a){return a.nama;}).join(", ");
+        row.jenjang_kk=ak.map(function(a){return a.pendidikan||"-";}).join(", ");
+        if(m.raport_index===null||m.raport_index===undefined){
+          row.status="PARTIAL";
+          row.notes.push("KK ditemukan ("+kk.kepala_keluarga+"). Raport tidak ditemukan: "+m.alasan_raport);
+        }else{
+          var rap=rapDocs[m.raport_index];
+          row.nama_siswa_raport=rap.nama_siswa;
+          row.jenjang_raport=rap.jenjang;
+          row.tahun_ajaran=rap.tahun_ajaran;
+          if(rap.jenjang===jDiaj){
+            row.status="VALID";
+            var akJenj=ak.map(function(a){return normJ(a.pendidikan);});
+            if(akJenj.indexOf(jDiaj)<0)row.notes.push("Info: jenjang di KK ("+row.jenjang_kk+") berbeda dari Raport, kemungkinan KK belum diperbarui");
+          }else{
+            row.status="INVALID";
+            row.notes.push("Jenjang Raport ("+rap.jenjang+") tidak sesuai pengajuan ("+kar.jenjang+")");
+          }
+        }
+      }
+    }catch(err){
+      row.status="INVALID";
+      row.notes.push("Error: "+err.message);
+    }
+    row.notes=row.notes.join("; ")||"-";
+    results.push(row);
+    addLog((row.status==="VALID"?"&#10003;":row.status==="PARTIAL"?"&#9888;":"&#10007;")+" "+kar.nama+" → "+row.status,
+      row.status==="VALID"?"ok":row.status==="PARTIAL"?"w":"e");
+  }
+
+  // FASE 3: Kirim ke Sheets
+  setP(88,"Menyimpan ke Google Sheets...","");
+  var bid="VAL-"+Date.now().toString(36).toUpperCase();
+  var shOk=false;
+  if(SHEETS){
+    try{
+      if(kkRows.length||rapRows.length){
+        await fetch(SHEETS,{method:"POST",body:JSON.stringify({action:"submit_batch",batch_id:bid,submitted_by:"PIC",total_files:toProc.length,kk_rows:kkRows,raport_rows:rapRows,failed_files:[]})});
+      }
+      var r2=await fetch(SHEETS,{method:"POST",body:JSON.stringify({action:"submit_validasi",batch_id:bid,submitted_by:"PIC",
+        rows:results.map(function(r){return {nama_karyawan:r.nama_karyawan,jenjang_diajukan:r.jenjang_diajukan,nama_anak_kk:r.nama_anak_kk,jenjang_kk:r.jenjang_kk,nama_siswa_raport:r.nama_siswa_raport,jenjang_raport:r.jenjang_raport,tahun_ajaran:r.tahun_ajaran,status:r.status,notes:r.notes};})})}
+      );
+      var d2=await r2.json();
+      if(d2.status==="ok"){shOk=true;addLog("&#10003; Tersimpan ke Google Sheets ("+d2.saved+" baris)","ok");}
+    }catch(e2){addLog("&#10007; Gagal kirim Sheets: "+e2.message,"e");}
+  }
+
+  setP(100,"Selesai!","");
+  renderResult(shOk,bid);
+  busy=false;
+}
+
+function renderResult(shOk,bid){
+  var valid=results.filter(function(r){return r.status==="VALID";}).length;
+  var inv=results.filter(function(r){return r.status==="INVALID";}).length;
+  var part=results.filter(function(r){return r.status==="PARTIAL";}).length;
+  document.getElementById("rT").textContent=results.length;
+  document.getElementById("rV").textContent=valid;
+  document.getElementById("rI").textContent=inv;
+  document.getElementById("rP").textContent=part;
+  document.getElementById("resSub").textContent=valid+" valid, "+part+" partial, "+inv+" tidak valid";
+  var sb=document.getElementById("sbar");
+  if(shOk){sb.style.display="flex";document.getElementById("sbMsg").textContent="Tersimpan ke Google Sheets — Batch "+bid;}
+  else sb.style.display="none";
+  document.getElementById("resBody").innerHTML=results.map(function(r){
+    var badge=r.status==="VALID"?"<span class='sv svv'>&#10003; Valid</span>"
+      :r.status==="PARTIAL"?"<span class='sv svp'>&#9888; Partial</span>"
+      :"<span class='sv svi'>&#10007; Invalid</span>";
+    return "<tr><td style='font-weight:500'>"+r.nama_karyawan+"</td><td>"+(r.jenjang_diajukan||"-")+"</td><td>"+(r.nama_anak_kk||"-")+"</td><td>"+(r.jenjang_kk||"-")+"</td><td>"+(r.nama_siswa_raport||"-")+"</td><td>"+(r.jenjang_raport||"-")+"</td><td>"+(r.tahun_ajaran||"-")+"</td><td>"+badge+"</td><td class='nc'>"+r.notes+"</td></tr>";
+  }).join("");
+  document.getElementById("resSec").style.display="block";
+  document.getElementById("resSec").scrollIntoView({behavior:"smooth"});
+}
+
+function dlResult(){
+  var wb=XLSX.utils.book_new();
+  var hdr=["Nama Karyawan","Jenjang Diajukan","Nama Anak (KK)","Jenjang KK","Nama Siswa (Raport)","Jenjang Raport","Tahun Ajaran Raport","Status","Notes"];
+  var rows=[hdr].concat(results.map(function(r){return [r.nama_karyawan,r.jenjang_diajukan,r.nama_anak_kk,r.jenjang_kk,r.nama_siswa_raport,r.jenjang_raport,r.tahun_ajaran,r.status,r.notes];}));
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[24,16,28,16,28,16,14,10,40].map(function(w){return {wch:w};});
+  XLSX.utils.book_append_sheet(wb,ws,"Hasil Validasi");
+  XLSX.writeFile(wb,"validasi_beasiswa_"+new Date().toISOString().slice(0,10)+".xlsx");
+}
+
+function resetAll(){
+  kList=[];docs=[];results=[];
+  document.getElementById("kPrev").style.display="none";
+  document.getElementById("queue").innerHTML="";
+  document.getElementById("pgwrap").style.display="none";
+  document.getElementById("log").style.display="none";
+  document.getElementById("log").innerHTML="";
+  document.getElementById("resSec").style.display="none";
+  document.getElementById("dzK").classList.remove("loaded");
+  document.getElementById("fiK").value="";
+  document.getElementById("fiD").value="";
+  document.getElementById("sn1").className="step-num";
+  document.getElementById("sn2").className="step-num inactive";
+  document.getElementById("sn3").className="step-num inactive";
+  checkReady();
+}
+</script>
+</body>
+</html>
