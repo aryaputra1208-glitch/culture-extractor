@@ -433,25 +433,25 @@ async function extractDoc(fo){
 }
 
 async function matchKaryawan(nama, kkDocs, rapDocs){
-  // Buat daftar KK untuk prompt
+  // Step 1: Find KK by kepala keluarga name
   var kkLines=kkDocs.map(function(k,i){
-    var anakList=k.anak.map(function(a){return a.nama;}).join(", ");
-    return i+". Kepala: "+k.kepala_keluarga+" | Anak-anak: "+anakList;
+    return i+". "+k.kepala_keluarga;
   }).join("\n");
 
-  // Buat daftar Raport untuk prompt — Raport sebagai anchor
   var rapLines=rapDocs.map(function(r,i){
-    return i+". Nama siswa: "+r.nama_siswa+" | Jenjang: "+r.jenjang+" | TA: "+r.tahun_ajaran;
+    return i+". "+r.nama_siswa+" | "+r.jenjang+" | "+r.tahun_ajaran;
   }).join("\n");
 
-  var jsnFmt='{"kk_index":null,"raport_index":null,"alasan_kk":"","alasan_raport":""}';
-  var prompt="OUTPUT HARUS JSON SAJA. JANGAN ada teks penjelasan, JANGAN ada markdown, JANGAN ada langkah-langkah.\n\n"
-    +"Cocokkan nama karyawan dengan KK dan Raport. Pertimbangkan kemungkinan OCR error.\n\n"
-    +"Nama karyawan: "+nama+"\n"
-    +"KK: "+(kkLines||"kosong")+"\n"
-    +"Raport: "+(rapLines||"kosong")+"\n\n"
-    +"Output JSON (ganti null dengan angka indeks jika cocok):\n"
-    +jsnFmt;
+  var prompt="OUTPUT HARUS JSON SAJA. TANPA teks penjelasan apapun.\n\n"
+    +"Nama karyawan: "+nama+"\n\n"
+    +"Daftar kepala keluarga di KK:\n"+(kkLines||"kosong")+"\n\n"
+    +"Daftar nama siswa di Raport:\n"+(rapLines||"kosong")+"\n\n"
+    +"TUGAS:\n"
+    +"1. Cari indeks KK yang kepala keluarganya paling mirip dengan nama karyawan (pertimbangkan OCR error).\n"
+    +"2. Cari indeks Raport yang nama siswanya kemungkinan adalah anak dari kepala keluarga tersebut "
+    +"(nama boleh berbeda dengan yang ada di KK karena OCR error, pertimbangkan kecocokan konteks).\n"
+    +"3. Jika tidak ada yang cocok, gunakan null.\n\n"
+    +'{"kk_index":null,"raport_index":null,"alasan_kk":"","alasan_raport":""}';
 
   var text=await callAPI([{role:"user",content:prompt}],400);
   return extractJSON(text);
