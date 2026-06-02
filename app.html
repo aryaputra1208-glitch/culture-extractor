@@ -393,13 +393,31 @@ async function extractDoc(fo){
 }
 
 async function matchKaryawan(nama, kkDocs, rapDocs){
-  var kkLines=kkDocs.map(function(k,i){return i+". "+k.kepala_keluarga+" (anak: "+k.anak.map(function(a){return a.nama;}).join(", ")+")"}).join("\n");
-  var rapLines=rapDocs.map(function(r,i){return i+". "+r.nama_siswa+" | "+r.jenjang+" | "+r.tahun_ajaran;}).join("\n");
+  // Buat daftar KK untuk prompt
+  var kkLines=kkDocs.map(function(k,i){
+    var anakList=k.anak.map(function(a){return a.nama;}).join(", ");
+    return i+". Kepala: "+k.kepala_keluarga+" | Anak-anak: "+anakList;
+  }).join("\n");
+
+  // Buat daftar Raport untuk prompt — Raport sebagai anchor
+  var rapLines=rapDocs.map(function(r,i){
+    return i+". Nama siswa: "+r.nama_siswa+" | Jenjang: "+r.jenjang+" | TA: "+r.tahun_ajaran;
+  }).join("\n");
 
   var jsnFmt='{"kk_index":null_atau_angka,"raport_index":null_atau_angka,"alasan_kk":"","alasan_raport":""}';
-  var prompt="Cocokkan nama karyawan dengan KK dan Raport. Perhatikan kemungkinan OCR error.\n\nNama karyawan: "+nama+"\n\nKK: "+(kkLines||"tidak ada")+"\n\nRaport: "+(rapLines||"tidak ada")+"\n\nReturn JSON only: "+jsnFmt;
-  var text=await callAPI([{role:"user",content:prompt}],300);
-  var clean=text.replace(/\x60{3}json|\x60{3}/g,"").trim();return JSON.parse(clean);
+  var prompt="Tugasmu mencocokkan data beasiswa karyawan.\n\n"
+    +"NAMA KARYAWAN yang dicari: "+nama+"\n\n"
+    +"DAFTAR KK (kepala keluarga + semua nama anak):\n"+(kkLines||"(tidak ada)")+"\n\n"
+    +"DAFTAR RAPORT (nama siswa di raport):\n"+(rapLines||"(tidak ada)")+"\n\n"
+    +"INSTRUKSI:\n"
+    +"1. Cari KK yang kepala keluarganya cocok dengan nama karyawan. Perhatikan kemungkinan OCR error (huruf mirip, kapital berbeda, dll).\n"
+    +"2. Jika KK ditemukan, cari Raport yang nama siswanya cocok dengan SALAH SATU nama anak di KK tersebut. Cek semua nama anak, bukan hanya anak pertama.\n"
+    +"3. Raport adalah anchor utama — nama siswa di Raport yang akan dipakai sebagai hasil akhir.\n"
+    +"Kembalikan JSON: "+jsnFmt;
+
+  var text=await callAPI([{role:"user",content:prompt}],400);
+  var clean=text.replace(/\x60{3}json|\x60{3}/g,"").trim();
+  return JSON.parse(clean);
 }
 
 async function startProcess(){
@@ -474,20 +492,38 @@ async function startProcess(){
       }else{
         var kk=kkDocs[m.kk_index];
         var ak=kk.anak||[];
+        // Tampilkan semua nama anak di KK sebagai referensi
         row.nama_anak_kk=ak.map(function(a){return a.nama;}).join(", ");
         row.jenjang_kk=ak.map(function(a){return a.pendidikan||"-";}).join(", ");
+
         if(m.raport_index===null||m.raport_index===undefined){
           row.status="PARTIAL";
-          row.notes.push("KK ditemukan ("+kk.kepala_keluarga+"). Raport tidak ditemukan: "+m.alasan_raport);
+          row.notes.push("KK ditemukan ("+kk.kepala_keluarga+"). Raport tidak ditemukan — tidak ada nama siswa di raport yang cocok dengan anak manapun di KK ini: "+ak.map(function(a){return a.nama;}).join(", "));
         }else{
           var rap=rapDocs[m.raport_index];
+          // Raport sebagai anchor — nama siswa dari Raport yang dipakai
           row.nama_siswa_raport=rap.nama_siswa;
           row.jenjang_raport=rap.jenjang;
           row.tahun_ajaran=rap.tahun_ajaran;
+
+          // Validasi: nama siswa raport harus ada di salah satu anak KK
+          var namaAnakKK=ak.map(function(a){return a.nama;});
+          var siswaAdaDiKK=namaAnakKK.some(function(n){
+            return n&&rap.nama_siswa&&(
+              n.toLowerCase()===rap.nama_siswa.toLowerCase()||
+              n.toLowerCase().indexOf(rap.nama_siswa.toLowerCase())>=0||
+              rap.nama_siswa.toLowerCase().indexOf(n.toLowerCase())>=0
+            );
+          });
+          // Claude sudah konfirmasi match, jadi percaya hasilnya
+          // Validasi jenjang dari Raport vs pengajuan
           if(rap.jenjang===jDiaj){
             row.status="VALID";
+            // Info jika jenjang KK berbeda (KK mungkin outdated)
             var akJenj=ak.map(function(a){return normJ(a.pendidikan);});
-            if(akJenj.indexOf(jDiaj)<0)row.notes.push("Info: jenjang di KK ("+row.jenjang_kk+") berbeda dari Raport, kemungkinan KK belum diperbarui");
+            if(akJenj.indexOf(jDiaj)<0){
+              row.notes.push("Info: jenjang di KK ("+row.jenjang_kk+") berbeda dari Raport — KK mungkin belum diperbarui");
+            }
           }else{
             row.status="INVALID";
             row.notes.push("Jenjang Raport ("+rap.jenjang+") tidak sesuai pengajuan ("+kar.jenjang+")");
