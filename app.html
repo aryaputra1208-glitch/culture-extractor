@@ -416,16 +416,14 @@ async function matchKaryawan(nama, kkDocs, rapDocs){
     return i+". Nama siswa: "+r.nama_siswa+" | Jenjang: "+r.jenjang+" | TA: "+r.tahun_ajaran;
   }).join("\n");
 
-  var jsnFmt='{"kk_index":null_atau_angka,"raport_index":null_atau_angka,"alasan_kk":"","alasan_raport":""}';
-  var prompt="Tugasmu mencocokkan data beasiswa karyawan.\n\n"
-    +"NAMA KARYAWAN yang dicari: "+nama+"\n\n"
-    +"DAFTAR KK (kepala keluarga + semua nama anak):\n"+(kkLines||"(tidak ada)")+"\n\n"
-    +"DAFTAR RAPORT (nama siswa di raport):\n"+(rapLines||"(tidak ada)")+"\n\n"
-    +"INSTRUKSI:\n"
-    +"1. Cari KK yang kepala keluarganya cocok dengan nama karyawan. Perhatikan kemungkinan OCR error (huruf mirip, kapital berbeda, dll).\n"
-    +"2. Jika KK ditemukan, cari Raport yang nama siswanya cocok dengan SALAH SATU nama anak di KK tersebut. Cek semua nama anak, bukan hanya anak pertama.\n"
-    +"3. Raport adalah anchor utama — nama siswa di Raport yang akan dipakai sebagai hasil akhir.\n"
-    +"Kembalikan JSON: "+jsnFmt;
+  var jsnFmt='{"kk_index":null,"raport_index":null,"alasan_kk":"","alasan_raport":""}';
+  var prompt="OUTPUT HARUS JSON SAJA. JANGAN ada teks penjelasan, JANGAN ada markdown, JANGAN ada langkah-langkah.\n\n"
+    +"Cocokkan nama karyawan dengan KK dan Raport. Pertimbangkan kemungkinan OCR error.\n\n"
+    +"Nama karyawan: "+nama+"\n"
+    +"KK: "+(kkLines||"kosong")+"\n"
+    +"Raport: "+(rapLines||"kosong")+"\n\n"
+    +"Output JSON (ganti null dengan angka indeks jika cocok):\n"
+    +jsnFmt;
 
   var text=await callAPI([{role:"user",content:prompt}],400);
   return extractJSON(text);
