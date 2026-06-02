@@ -342,6 +342,20 @@ async function callAPI(msgs, maxTok){
   return d.content.map(function(c){return c.text||"";}).join("").trim();
 }
 
+function extractJSON(text){
+  // Strip markdown code blocks
+  text=text.replace(/```json|```/g,"").trim();
+  // Try direct parse first
+  try{return JSON.parse(text);}catch(e){}
+  // Find JSON object in text (handles preamble like "Saya akan...")
+  var start=text.indexOf("{");
+  var end=text.lastIndexOf("}");
+  if(start>=0&&end>start){
+    try{return JSON.parse(text.slice(start,end+1));}catch(e){}
+  }
+  throw new Error("No valid JSON found in: "+text.slice(0,80));
+}
+
 async function rotateB64(b64, deg){
   return new Promise(function(res){
     var img=new Image();
@@ -364,8 +378,7 @@ async function extractDoc(fo){
   if(m==="application/pdf"){
     var item={type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}};
     var text=await callAPI([{role:"user",content:[item,{type:"text",text:EXTRACT_PROMPT}]}],1500);
-    var clean=text.replace(/\x60{3}json|\x60{3}/g,"").trim();
-    return JSON.parse(clean);
+    return extractJSON(text);
   }
   var rotations=[0,90,270,180];
   var lastResult=null;
@@ -375,8 +388,7 @@ async function extractDoc(fo){
     var item={type:"image",source:{type:"base64",media_type:"image/jpeg",data:imgB64}};
     try{
       var text=await callAPI([{role:"user",content:[item,{type:"text",text:EXTRACT_PROMPT}]}],1500);
-      var clean=text.replace(/\x60{3}json|\x60{3}/g,"").trim();
-      var result=JSON.parse(clean);
+      var result=extractJSON(text);
       lastResult=result;
       var ok=(result.tipe==="KK"&&result.kepala_keluarga&&result.kepala_keluarga.length>2)
            ||(result.tipe==="Raport"&&result.nama_siswa&&result.nama_siswa.length>2);
@@ -416,8 +428,7 @@ async function matchKaryawan(nama, kkDocs, rapDocs){
     +"Kembalikan JSON: "+jsnFmt;
 
   var text=await callAPI([{role:"user",content:prompt}],400);
-  var clean=text.replace(/\x60{3}json|\x60{3}/g,"").trim();
-  return JSON.parse(clean);
+  return extractJSON(text);
 }
 
 async function startProcess(){
