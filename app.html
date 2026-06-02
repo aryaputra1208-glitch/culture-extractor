@@ -385,6 +385,7 @@ async function extractDoc(fo){
   }
   var rotations=[0,90,270,180];
   var lastResult=null;
+
   for(var ri=0;ri<rotations.length;ri++){
     var deg=rotations[ri];
     var imgB64=deg===0?b64:await rotateB64(b64,deg);
@@ -392,17 +393,41 @@ async function extractDoc(fo){
     try{
       var text=await callAPI([{role:"user",content:[item,{type:"text",text:EXTRACT_PROMPT}]}],1500);
       var result=extractJSON(text);
-      lastResult=result;
-      var ok=(result.tipe==="KK"&&result.kepala_keluarga&&result.kepala_keluarga.length>2)
-           ||(result.tipe==="Raport"&&result.nama_siswa&&result.nama_siswa.length>2);
-      if(ok){
-        if(deg>0)addLog("  Rotasi "+deg+"deg berhasil untuk "+fo.name,"ok");
+
+      // Validasi kualitas hasil ekstraksi
+      var isValidKK=result.tipe==="KK"
+        && result.kepala_keluarga
+        && result.kepala_keluarga.length>3
+        && result.kepala_keluarga.toUpperCase()!=="KEPALA KELUARGA"
+        && result.kepala_keluarga.toUpperCase()!=="NAMA LENGKAP"
+        && (result.anak||[]).length>=0; // boleh 0 anak, tapi kepala keluarga harus valid
+
+      var isValidRaport=result.tipe==="Raport"
+        && result.nama_siswa
+        && result.nama_siswa.length>3
+        && result.nama_siswa.toUpperCase()!=="NAMA SISWA"
+        && result.nama_siswa.toUpperCase()!=="PESERTA DIDIK";
+
+      if(isValidKK||isValidRaport){
+        if(deg>0)addLog("  Rotasi "+deg+"deg berhasil: "+fo.name,"ok");
+        lastResult=result;
         return result;
       }
-      if(result.tipe==="UNKNOWN"&&ri<rotations.length-1){
-        addLog("  Orientasi "+deg+"deg tidak dikenali, coba rotasi...","w");
+
+      // Hasil tidak valid, coba rotasi berikutnya
+      if(ri<rotations.length-1){
+        var reason=result.tipe==="UNKNOWN"?"UNKNOWN"
+          :result.tipe==="KK"?"KK tapi nama tidak valid ("+result.kepala_keluarga+")"
+          :result.tipe==="Raport"?"Raport tapi nama tidak valid ("+result.nama_siswa+")"
+          :"tipe tidak dikenali";
+        addLog("  Orientasi "+deg+"deg: "+reason+", coba rotasi berikutnya...","w");
+        lastResult=result;
       }
-    }catch(e){if(ri===rotations.length-1)throw e;}
+
+    }catch(e){
+      addLog("  Orientasi "+deg+"deg error: "+e.message,"w");
+      if(ri===rotations.length-1&&lastResult)return lastResult;
+    }
   }
   return lastResult||{tipe:"UNKNOWN",alasan:"Semua orientasi gagal"};
 }
