@@ -310,31 +310,31 @@ function normJ(j){
   return j.trim();
 }
 
-var EXTRACT_PROMPT = `Kamu adalah sistem ekstraksi dokumen Indonesia yang sangat teliti. Baca dokumen ini dengan sangat hati-hati.
+var EXTRACT_PROMPT = `Kamu adalah sistem ekstraksi dokumen Indonesia yang sangat teliti. Baca dokumen dengan hati-hati meski foto miring, buram, atau sebagian terpotong.
 
 PENTING - KARTU KELUARGA:
-Struktur tabel KK Indonesia memiliki kolom header: No, Nama Lengkap, NIK, Jenis Kelamin, Tempat Lahir, Tanggal Lahir, Agama, Pendidikan, dll.
-Dan tabel kedua berisi: Status Perkawinan, Tanggal Perkawinan, Status Hubungan Dalam Keluarga, Kewarganegaraan, dll.
-
-JANGAN pernah mengambil nama kolom header seperti "JENIS KELAMIN", "NAMA LENGKAP", "NIK", "AGAMA", dll sebagai nama anggota keluarga.
-Nama anggota keluarga adalah teks NYATA di dalam sel tabel, bukan header kolomnya.
-
-Status Hubungan Dalam Keluarga yang valid: KEPALA KELUARGA, ISTRI, ANAK, MENANTU, CUCU, dll.
+Struktur tabel KK: kolom header = No, Nama Lengkap, NIK, Jenis Kelamin, Tempat Lahir, Tanggal Lahir, Agama, Pendidikan, dll.
+JANGAN ambil nama kolom header sebagai nama anggota. Nama anggota adalah teks di dalam sel, bukan headernya.
+Tabel kedua berisi: Status Hubungan Dalam Keluarga (Kepala Keluarga/Istri/Anak).
 Hanya ambil anggota dengan status hubungan = ANAK.
 
-Format output jika KARTU KELUARGA:
-{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"nama_asli_anak","jenis_kelamin":"L atau P","tanggal_lahir":"","pendidikan":""}]}
+Output jika KARTU KELUARGA:
+{"tipe":"KK","no_kk":"","kepala_keluarga":"","anak":[{"nama":"","jenis_kelamin":"L atau P","tanggal_lahir":"","pendidikan":""}]}
 
 PENTING - RAPORT:
-Raport bisa berupa: SD/SMP/SMA/SMK, PAUD/TK/RA, Pesantren/Madrasah.
-Nama siswa ada di bagian header/identitas dokumen, bukan di dalam tabel nilai.
+Bisa berupa SD/SMP/SMA/SMK, PAUD/TK/RA, atau Pesantren/Madrasah.
+Nama siswa/anak SELALU ada di bagian identitas/header dokumen (bukan di tabel nilai).
+Untuk PAUD/TK: nama anak biasanya di halaman depan raport, bisa berupa "Nama Anak:", "Nama:", atau di bagian header.
+Jika halaman ini adalah halaman tengah/belakang raport dan nama tidak terlihat, cari tanda tangan orang tua atau nama yang disebutkan di dokumen.
 
-Format output jika RAPORT:
+Output jika RAPORT:
 {"tipe":"Raport","nama_siswa":"","nama_sekolah":"","jenjang":"","kelas":"","semester":"","tahun_ajaran":""}
 Jenjang: PAUD/TK atau SD atau SMP atau SMA atau SMK atau Perguruan Tinggi atau Pesantren/Madrasah
+Semester: 1 atau 2 (kosong jika PAUD)
+Tahun ajaran: format 2024/2025
 
 Jika tidak dikenali: {"tipe":"UNKNOWN","alasan":""}
-Kembalikan HANYA JSON murni tanpa markdown.`;
+Kembalikan HANYA JSON murni tanpa markdown.`
 
 async function callAPI(msgs, maxTok){
   var r=await fetch(WORKER,{method:"POST",headers:{"Content-Type":"application/json"},
@@ -433,27 +433,32 @@ async function extractDoc(fo){
 }
 
 async function matchKaryawan(nama, kkDocs, rapDocs){
-  // Step 1: Find KK by kepala keluarga name
   var kkLines=kkDocs.map(function(k,i){
-    return i+". "+k.kepala_keluarga;
+    var anakList=k.anak.map(function(a){return a.nama||"(kosong)";}).join(", ");
+    return i+". Kepala: "+k.kepala_keluarga+" | Anak: "+anakList;
   }).join("\n");
 
   var rapLines=rapDocs.map(function(r,i){
-    return i+". "+r.nama_siswa+" | "+r.jenjang+" | "+r.tahun_ajaran;
+    var nm=r.nama_siswa||"(nama tidak terbaca)";
+    return i+". Nama siswa: "+nm+" | Jenjang: "+r.jenjang+" | TA: "+r.tahun_ajaran;
   }).join("\n");
 
   var prompt="OUTPUT HARUS JSON SAJA. TANPA teks penjelasan apapun.\n\n"
+    +"Cocokkan nama karyawan dengan KK dan Raport.\n\n"
     +"Nama karyawan: "+nama+"\n\n"
-    +"Daftar kepala keluarga di KK:\n"+(kkLines||"kosong")+"\n\n"
-    +"Daftar nama siswa di Raport:\n"+(rapLines||"kosong")+"\n\n"
-    +"TUGAS:\n"
-    +"1. Cari indeks KK yang kepala keluarganya paling mirip dengan nama karyawan (pertimbangkan OCR error).\n"
-    +"2. Cari indeks Raport yang nama siswanya kemungkinan adalah anak dari kepala keluarga tersebut "
-    +"(nama boleh berbeda dengan yang ada di KK karena OCR error, pertimbangkan kecocokan konteks).\n"
-    +"3. Jika tidak ada yang cocok, gunakan null.\n\n"
+    +"Daftar KK:\n"+(kkLines||"kosong")+"\n\n"
+    +"Daftar Raport:\n"+(rapLines||"kosong")+"\n\n"
+    +"ATURAN MATCHING:\n"
+    +"1. Cocokkan kepala keluarga KK dengan nama karyawan (pertimbangkan OCR error: huruf mirip, singkatan, urutan kata berbeda).\n"
+    +"2. Jika KK ditemukan, cocokkan nama siswa di Raport dengan nama anak di KK. PENTING:\n"
+    +"   - Nama boleh tidak persis sama karena OCR error (contoh: MUHAMMAD AHDIAN = MUHAMAD AMDAN = kemungkinan orang yang sama)\n"
+    +"   - Jika nama siswa di Raport kosong/tidak terbaca, cocokkan berdasarkan jenjang dan konteks\n"
+    +"   - Jika hanya ada 1 Raport dan 1 KK yang cocok, kemungkinan besar Raport tersebut milik anak di KK\n"
+    +"   - Pertimbangkan kecocokan sebagian nama (minimal 2 kata yang mirip)\n"
+    +"3. Gunakan null jika benar-benar tidak ada kecocokan.\n\n"
     +'{"kk_index":null,"raport_index":null,"alasan_kk":"","alasan_raport":""}';
 
-  var text=await callAPI([{role:"user",content:prompt}],400);
+  var text=await callAPI([{role:"user",content:prompt}],500);
   return extractJSON(text);
 }
 
